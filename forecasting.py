@@ -7,8 +7,9 @@ import multiprocessing
 from datetime import datetime
 
 from api_client import YandexWeatherAPI
+from constants import FORECAST_TARGET_HOURS, PLEASANT_CONDITIONS
 from tasks import DataAggregationTask, DataAnalyzingTask, DataCalculationTask, DataFetchingTask
-from utils import CITIES, FORECAST_TARGET_HOURS, PLEASANT_CONDITIONS
+
 
 logger = logging.getLogger()
 
@@ -20,34 +21,39 @@ def forecast_weather():
     task = DataFetchingTask(YandexWeatherAPI())
     rough_data = task.get_weather_data()
     # weather params
-    unique_days = set()
-    city_forecasts = {}
+    # unique_days = set()
+    # city_forecasts = {}
 
-    for city, data in rough_data:
-        forecast_days = {}
-        for forecast in data["forecasts"]:
-            forecast_hours = [
-                hour for hour in forecast["hours"] if int(hour["hour"]) in FORECAST_TARGET_HOURS
-            ]
-            if not forecast_hours:
-                continue
+    # for city, data in rough_data:
+    #     forecast_days = {}
+    #     for forecast in data["forecasts"]:
+    #         forecast_hours = [
+    #             hour for hour in forecast["hours"] if int(hour["hour"]) in FORECAST_TARGET_HOURS
+    #         ]
+    #         if not forecast_hours:
+    #             continue
 
-            # average temperature
-            temperature_avg = sum(hour["temp"] for hour in forecast_hours) / len(forecast_hours)
-            # pleasant condition hours
-            pleasant_hours = sum(
-                1 for hour in forecast_hours if hour["condition"] in PLEASANT_CONDITIONS
-            )
+    #         # average temperature
+    #         temperature_avg = sum(hour["temp"] for hour in forecast_hours) / len(forecast_hours)
+    #         # pleasant condition hours
+    #         pleasant_hours = sum(
+    #             1 for hour in forecast_hours if hour["condition"] in PLEASANT_CONDITIONS
+    #         )
 
-            forecast_days[forecast["date"]] = {
-                "temperature_avg": temperature_avg,
-                "pleasant_hours": pleasant_hours,
-            }
+    #         forecast_days[forecast["date"]] = {
+    #             "temperature_avg": temperature_avg,
+    #             "pleasant_hours": pleasant_hours,
+    #         }
 
-        city_forecasts[city] = {"forecast_days": forecast_days}
-        unique_days.update(forecast_days.keys())
+    #     city_forecasts[city] = {"forecast_days": forecast_days}
+    #     unique_days.update(forecast_days.keys())
 
-    unique_city_names = set(city_forecasts.keys())
+    # unique_city_names = set(city_forecasts.keys())
+    task = DataCalculationTask(rough_data)
+    task.worker()
+    unique_city_names = set(task.city_forecasts.keys())
+    unique_days = task.unique_days
+    city_forecasts = task.city_forecasts
     logger.info(f"city_forecasts: {city_forecasts}")
 
     # # aggregations
