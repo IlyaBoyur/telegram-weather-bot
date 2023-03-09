@@ -17,8 +17,6 @@ CITIES = {
 }
 
 ERR_MESSAGE_TEMPLATE = "Something wrong. Please contact with mentor."
-PLEASANT_CONDITIONS = set(["clear", "partly-cloudy", "cloudy", "overcast"])
-FORECAST_TARGET_HOURS = set(range(9, 20))
 
 MIN_MAJOR_PYTHON_VER = 3
 MIN_MINOR_PYTHON_VER = 9
