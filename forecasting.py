@@ -3,6 +3,7 @@ import logging
 # import threading
 # import subprocess
 import multiprocessing
+
 from datetime import datetime
 
 from api_client import YandexWeatherAPI
@@ -16,9 +17,8 @@ def forecast_weather():
     """Анализ погодных условий по городам"""
 
     # data request
-    with multiprocessing.Pool() as pool:
-        rough_data = pool.map(DataFetchingTask(YandexWeatherAPI()).run, CITIES)
-
+    task = DataFetchingTask(YandexWeatherAPI())
+    rough_data = task.get_weather_data()
     # weather params
     unique_days = set()
     city_forecasts = {}
@@ -100,6 +100,7 @@ def forecast_weather():
 
     for city in unique_city_names:
         days = city_forecasts[city]["forecast_days"]
+
         temperature_avg_days = [days.get(day, {}).get("temperature_avg", "") for day in sorted_days]
         dataset.append(
             [
@@ -133,6 +134,6 @@ def forecast_weather():
 
 
 if __name__ == "__main__":
-    logging.basicConfig(format="[%(levelname)s] - %(asctime)s - %(message)s", level=logging.INFO)
+    logging.basicConfig(format="[%(levelname)s] - %(asctime)s - %(message)s", level=logging.INFO, datefmt='%H:%M:%S')
 
     forecast_weather()
