@@ -26,17 +26,23 @@ class DataFetchingTask:
 
     def worker(self):
         with ThreadPool() as pool:
-            return pool.map(self.load_url, CITIES) 
+            return [
+                (city, forecast)
+                for city, forecast in pool.map(self.load_url, CITIES)
+                if forecast is not None
+            ] 
 
 
 class DataCalculationTask:
     """Вычисление погодных параметров"""
 
     def __init__(self, data):
-        self.data = [(city, forecast) for city, forecast in data if forecast is not None]
+        self.data = data
 
     @staticmethod
     def select_forecast_hours(all_hours):
+        """Фильтрует прогнозные данные по времени"""
+
         hours = [
             hour for hour in all_hours if int(hour["hour"]) in FORECAST_TARGET_HOURS
         ]
@@ -58,16 +64,28 @@ class DataCalculationTask:
         )
         return pleasant_hours
 
+    # def calc_day_aggregates(self, hours):
+    #     hours = self.select_forecast_hours(all_hours)
+    #     if not hours:
+    #         return
+    #     return {
+    #         "temperature_avg": self.calculate_avg_temperature(hours),
+    #         "pleasant_hours": self.calculate_comfort_hours(hours),
+    #     }
+
     def calculate_city_data(self, data):
         days = {}
+
         for forecast in data["forecasts"]:
             hours = self.select_forecast_hours(forecast["hours"])
             if not hours:
                 continue
-            days[forecast["date"]] = {
+            day = {
                 "temperature_avg": self.calculate_avg_temperature(hours),
                 "pleasant_hours": self.calculate_comfort_hours(hours),
             }
+            days[forecast["date"]] = day
+
         temperature_total_avg = sum(days[day]["temperature_avg"] for day in days) / len(days)
         hours_total_avg = sum(days[day]["pleasant_hours"] for day in days) / len(days)
         city = {}
@@ -150,7 +168,8 @@ class DataAnalyzingTask:
         ]
 
         for city_name in cities:
-            days = self.data[city_name]["forecast_days"]
+            city = self.data[city_name]
+            days = city["forecast_days"]
 
             temperature_avg_days = [days.get(day, {}).get("temperature_avg", "") for day in sorted_days]
             dataset.append(
@@ -161,8 +180,8 @@ class DataAnalyzingTask:
                         f"{temperature:.1f}" if temperature else ""
                         for temperature in temperature_avg_days
                     ],
-                    f"{self.data[city_name]['temperature_total_avg']:.1f}",
-                    self.data[city_name]["rating"],
+                    f"{city['temperature_total_avg']:.1f}",
+                    city["rating"],
                 ]
             )
 
@@ -174,7 +193,7 @@ class DataAnalyzingTask:
                     "",
                     "Без осадков, часов",
                     *[f"{hours:.1f}" if hours else "" for hours in pleasant_hours_avg_days],
-                    f"{self.data[city_name]['hours_total_avg']:.1f}",
+                    f"{city['hours_total_avg']:.1f}",
                     "",
                 ]
             )
