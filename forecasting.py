@@ -4,7 +4,7 @@ import logging
 # import subprocess
 import multiprocessing
 
-from datetime import datetime
+
 
 from api_client import YandexWeatherAPI
 from constants import FORECAST_TARGET_HOURS, PLEASANT_CONDITIONS
@@ -49,12 +49,11 @@ def forecast_weather():
     #     unique_days.update(forecast_days.keys())
 
     # unique_city_names = set(city_forecasts.keys())
-    task = DataCalculationTask(rough_data)
-    task.worker()
-    unique_city_names = set(task.city_forecasts.keys())
-    unique_days = task.unique_days
-    city_forecasts = task.city_forecasts
-    logger.info(f"city_forecasts: {city_forecasts}\n")
+    forecasts_data = DataCalculationTask(rough_data).worker()
+    # unique_city_names = set(task.city_forecasts.keys())
+    # unique_days = task.unique_days
+    # city_forecasts = task.city_forecasts
+    logger.info(f"forecasts_data: {forecasts_data}\n")
 
     # # aggregations
     # for city in city_forecasts:
@@ -66,8 +65,8 @@ def forecast_weather():
     #         "temperature_total_avg": temperature_total_avg,
     #         "hours_total_avg": hours_total_avg,
     #     }
-    city_aggregations = task.city_aggregations
-    logger.info(f"city_aggregations: {city_aggregations}\n")
+    # city_aggregations = task.city_aggregations
+    # logger.info(f"city_aggregations: {city_aggregations}\n")
 
     # rating
     # city_ratings = {}
@@ -90,54 +89,55 @@ def forecast_weather():
     #     city_ratings[city] = {"rating": number}
 
 
-    task = DataAggregationTask(city_aggregations)
-    task.worker()
-    city_ratings = task.city_ratings
+    aggregations_data = DataAggregationTask(forecasts_data).worker()
+    # task.worker()
+    # city_ratings = task.city_ratings
 
     # export
-    sorted_days = sorted(unique_days)
+    # sorted_days = sorted(unique_days)
 
-    logger.info(f"unique days: {sorted_days}")
-    import tablib
+    # logger.info(f"unique days: {sorted_days}")
+    # import tablib
 
-    dataset = tablib.Dataset()
-    dataset.headers = [
-        "Город/день",
-        "",
-        *[datetime.strptime(day, "%Y-%m-%d").strftime("%d-%m") for day in sorted_days],
-        "Среднее",
-        "Рейтинг",
-    ]
+    # dataset = tablib.Dataset()
+    # dataset.headers = [
+    #     "Город/день",
+    #     "",
+    #     *[datetime.strptime(day, "%Y-%m-%d").strftime("%d-%m") for day in sorted_days],
+    #     "Среднее",
+    #     "Рейтинг",
+    # ]
 
-    for city in unique_city_names:
-        days = city_forecasts[city]["forecast_days"]
+    # for city in unique_city_names:
+    #     days = city_forecasts[city]["forecast_days"]
 
-        temperature_avg_days = [days.get(day, {}).get("temperature_avg", "") for day in sorted_days]
-        dataset.append(
-            [
-                city.lower().title(),
-                "Температура, среднее",
-                *[
-                    f"{temperature:.1f}" if temperature else ""
-                    for temperature in temperature_avg_days
-                ],
-                f"{city_aggregations[city]['temperature_total_avg']:.1f}",
-                city_ratings[city]["rating"],
-            ]
-        )
+    #     temperature_avg_days = [days.get(day, {}).get("temperature_avg", "") for day in sorted_days]
+    #     dataset.append(
+    #         [
+    #             city.lower().title(),
+    #             "Температура, среднее",
+    #             *[
+    #                 f"{temperature:.1f}" if temperature else ""
+    #                 for temperature in temperature_avg_days
+    #             ],
+    #             f"{city_aggregations[city]['temperature_total_avg']:.1f}",
+    #             city_ratings[city]["rating"],
+    #         ]
+    #     )
 
-        pleasant_hours_avg_days = [
-            days.get(day, {}).get("pleasant_hours", "") for day in sorted_days
-        ]
-        dataset.append(
-            [
-                "",
-                "Без осадков, часов",
-                *[f"{hours:.1f}" if hours else "" for hours in pleasant_hours_avg_days],
-                f"{city_aggregations[city]['hours_total_avg']:.1f}",
-                "",
-            ]
-        )
+    #     pleasant_hours_avg_days = [
+    #         days.get(day, {}).get("pleasant_hours", "") for day in sorted_days
+    #     ]
+    #     dataset.append(
+    #         [
+    #             "",
+    #             "Без осадков, часов",
+    #             *[f"{hours:.1f}" if hours else "" for hours in pleasant_hours_avg_days],
+    #             f"{city_aggregations[city]['hours_total_avg']:.1f}",
+    #             "",
+    #         ]
+    #     )
+    dataset = DataAnalyzingTask(aggregations_data).worker()
     return dataset
 
 
