@@ -37,8 +37,8 @@ class DataFetchingTask:
 class DataCalculationTask:
     """Вычисление погодных параметров"""
 
-    def __init__(self, data):
-        self.data = data
+    def __init__(self, cities):
+        self.cities = cities
 
     @staticmethod
     def select_forecast_hours(all_hours):
@@ -168,12 +168,12 @@ class DataAggregationTask:
 class DataAnalyzingTask:
     """Финальный анализ и получение результата"""
 
-    def __init__(self, initial_data):
-        self.data = initial_data
+    def __init__(self, cities):
+        self.cities = cities
         
     def get_sorted_days(self):
         # days_gen = (self.data[city]["forecast_days"] for city in self.data)
-        days_gen = (city["forecast_days"] for city in self.data)
+        days_gen = (city["forecast_days"] for city in self.cities)
         unique_days = set(
             key for days in days_gen for key in days.keys() 
         )
@@ -203,7 +203,7 @@ class DataAnalyzingTask:
 
         # for city_name in cities:
             # city = self.data[city_name]
-        for city in self.data:
+        for city in self.cities:
             days = city["forecast_days"]
 
             temperature_avg_days = [days.get(day, {}).get("temperature_avg", "") for day in sorted_days]
