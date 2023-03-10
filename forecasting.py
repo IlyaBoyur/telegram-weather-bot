@@ -20,6 +20,7 @@ def forecast_weather():
     # data request
     task = DataFetchingTask(YandexWeatherAPI())
     rough_data = task.get_weather_data()
+
     # weather params
     # unique_days = set()
     # city_forecasts = {}
@@ -54,40 +55,45 @@ def forecast_weather():
     unique_city_names = set(task.city_forecasts.keys())
     unique_days = task.unique_days
     city_forecasts = task.city_forecasts
-    logger.info(f"city_forecasts: {city_forecasts}")
+    logger.info(f"city_forecasts: {city_forecasts}\n")
 
     # # aggregations
-    city_aggregations = {}
+    # for city in city_forecasts:
+    #     days = city_forecasts[city]["forecast_days"]
+    #     temperature_total_avg = sum(days[day]["temperature_avg"] for day in days) / len(days)
+    #     hours_total_avg = sum(days[day]["pleasant_hours"] for day in days) / len(days)
 
-    for city in city_forecasts:
-        days = city_forecasts[city]["forecast_days"]
-        temperature_total_avg = sum(days[day]["temperature_avg"] for day in days) / len(days)
-        hours_total_avg = sum(days[day]["pleasant_hours"] for day in days) / len(days)
-
-        city_aggregations[city] = {
-            "temperature_total_avg": temperature_total_avg,
-            "hours_total_avg": hours_total_avg,
-        }
+    #     city_aggregations[city] = {
+    #         "temperature_total_avg": temperature_total_avg,
+    #         "hours_total_avg": hours_total_avg,
+    #     }
+    city_aggregations = task.city_aggregations
+    logger.info(f"city_aggregations: {city_aggregations}\n")
 
     # rating
-    city_ratings = {}
+    # city_ratings = {}
 
-    for number, city in enumerate(
-        sorted(
-            city_aggregations,
-            key=lambda city: (
-                -city_aggregations[city]["temperature_total_avg"],
-                -city_aggregations[city]["hours_total_avg"],
-            ),
-        ),
-        1,
-    ):
-        logger.info(
-            f"{number:3}) {city:15}"
-            f"   temp_avg:{city_aggregations[city]['temperature_total_avg']:5.2f}"
-            f"   hours_avg:{city_aggregations[city]['hours_total_avg']:5.2f}"
-        )
-        city_ratings[city] = {"rating": number}
+    # for number, city in enumerate(
+    #     sorted(
+    #         city_aggregations,
+    #         key=lambda city: (
+    #             -city_aggregations[city]["temperature_total_avg"],
+    #             -city_aggregations[city]["hours_total_avg"],
+    #         ),
+    #     ),
+    #     1,
+    # ):
+    #     logger.info(
+    #         f"{number:3}) {city:15}"
+    #         f"   temp_avg:{city_aggregations[city]['temperature_total_avg']:5.2f}"
+    #         f"   hours_avg:{city_aggregations[city]['hours_total_avg']:5.2f}"
+    #     )
+    #     city_ratings[city] = {"rating": number}
+
+
+    task = DataAggregationTask(city_aggregations)
+    task.worker()
+    city_ratings = task.city_ratings
 
     # export
     sorted_days = sorted(unique_days)
@@ -133,13 +139,15 @@ def forecast_weather():
                 "",
             ]
         )
+    return dataset
 
-    # Write spreadsheet to disk
-    with open("forecasts.xls", "wb") as f:
-        f.write(dataset.export("xls"))
+
 
 
 if __name__ == "__main__":
     logging.basicConfig(format="[%(levelname)s] - %(asctime)s - %(message)s", level=logging.INFO, datefmt='%H:%M:%S')
 
-    forecast_weather()
+    dataset = forecast_weather()
+    # Write spreadsheet to disk
+    with open("forecasts.xls", "wb") as f:
+        f.write(dataset.export("xls"))
