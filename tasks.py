@@ -175,41 +175,44 @@ class DataAnalyzingTask:
             "",
         ]
         return temperature_row, hours_row
-    
+
     def prepare_city_rows_parallel(self, active: Queue, finished: Queue):
         while True:
             try:
-                task = active.get_nowait()
+                city = active.get_nowait()
             except queue.Empty:
                 logging.debug(f"Process {current_process().pid} has finished")
                 break
             else:
-                tasks_completed.put(self.prepare_city_rows(city, all_days))
+                finished.put(self.prepare_city_rows(city, self.all_days))
 
     def worker(self):
-        import tablib
         import os
 
-        sorted_days = self.get_sorted_days()
+        import tablib
 
         dataset = tablib.Dataset()
         dataset.headers = [
             "Город/день",
             "",
-            *[datetime.strptime(day, "%Y-%m-%d").strftime("%d-%m") for day in sorted_days],
+            *[
+                datetime.strptime(day, "%Y-%m-%d").strftime("%d-%m")
+                for day in self.all_days
+            ],
             "Среднее",
             "Рейтинг",
         ]
 
         queue_in, queue_out = Queue(), Queue()
+        [queue_in.put(city) for city in self.cities]
         processes = []
         for _ in range(os.cpu_count()):
-            process = Process(target=self.prepare_city_rows_parallel(queue_in, queue_out))
+            process = Process(
+                target=self.prepare_city_rows_parallel(queue_in, queue_out)
+            )
             process.start()
             processes.append(process)
         [process.join() for process in processes]
-        
         while not queue_out.empty():
-            dataset.extend(queue.get())
-
+            dataset.extend(queue_out.get())
         return dataset
