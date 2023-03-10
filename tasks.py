@@ -1,7 +1,7 @@
 import logging
 from constants import ERROR_WEATHER_API, TIMEOUT_PERIOD,  FORECAST_TARGET_HOURS, PLEASANT_CONDITIONS
 from utils import CITIES, ERR_MESSAGE_TEMPLATE
-from multiprocessing import Process, Queue
+from multiprocessing import Process, Queue, Pool
 from multiprocessing.dummy import Pool as ThreadPool
 from datetime import datetime
 
@@ -27,11 +27,13 @@ class DataFetchingTask:
 
     def worker(self):
         with ThreadPool() as pool:
-            return [
+            data = [
                 forecast
                 for forecast in pool.map(self.load_url, CITIES)
                 if forecast is not None
-            ] 
+            ]
+            logger.debug(f"DataFetchingTask output: {data}")
+            return data
 
 
 class DataCalculationTask:
@@ -74,7 +76,7 @@ class DataCalculationTask:
     #         "pleasant_hours": self.calculate_comfort_hours(hours),
     #     }
 
-    # def calculate_city_data(self, queue_in, queue_out):
+
     def calculate_city_data(self, data):
         days = {}
 
@@ -98,27 +100,9 @@ class DataCalculationTask:
         return city
 
     def worker(self):
-        # queue_in = Queue()
-        # queue_out = Queue()
-        # [queue.put(data) for _, data in self.data]
-        # processes = [
-        #     Process(target=self.calculate_city_data, args=(queue_in, queue_out))
-        # ]
-        # [process.start() for process in processes]
-        # [process.join() for process in processes]
-        # city_forecasts = {
-        #     city_name: self.calculate_city_data(data)
-        #     for city_name, data in self.data
-        # }
-        # city_forecasts = {
-        #     data["city"]: self.calculate_city_data(data)
-        #     for data in self.data
-        # }
-        city_forecasts = [
-            self.calculate_city_data(city) for city in self.data
-        ]
-        # city_forecasts = [queue_out.get() for _ in range(queue_out.qsize())]
-        logger.info(f"forecasts_data: {city_forecasts}")
+        with Pool() as pool:
+            city_forecasts = pool.map(self.calculate_city_data, self.cities)
+        logger.debug(f"forecasts_data: {city_forecasts}")
         return city_forecasts
 
 
@@ -161,7 +145,7 @@ class DataAggregationTask:
                 f"   hours_avg:{city['hours_total_avg']:5.2f}"
             )
             city['rating'] = number
-        logger.info(f"aggregations_data: {self.city_aggregations}")
+        logger.debug(f"aggregations_data: {self.city_aggregations}")
         return self.city_aggregations
 
 
