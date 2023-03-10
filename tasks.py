@@ -34,25 +34,25 @@ class DataCalculationTask:
         # self.city_aggregations = {}
 
     @staticmethod
-    def select_forecast_hours(forecast):
+    def select_forecast_hours(all_hours):
         hours = [
-            hour for hour in forecast["hours"] if int(hour["hour"]) in FORECAST_TARGET_HOURS
+            hour for hour in all_hours if int(hour["hour"]) in FORECAST_TARGET_HOURS
         ]
         return hours
 
     @staticmethod
-    def calculate_avg_temperature(forecast_hours):
+    def calculate_avg_temperature(hours):
         """Считает среднюю температуру за период"""
 
-        temperature = sum(hour["temp"] for hour in forecast_hours) / len(forecast_hours)
+        temperature = sum(hour["temp"] for hour in hours) / len(hours)
         return temperature
     
     @staticmethod
-    def calculate_comfort_hours(forecast_hours):
+    def calculate_comfort_hours(hours):
         """Считает время без осадков за период"""
 
         pleasant_hours = sum(
-            1 for hour in forecast_hours if hour["condition"] in PLEASANT_CONDITIONS
+            1 for hour in hours if hour["condition"] in PLEASANT_CONDITIONS
         )
         return pleasant_hours
 
@@ -61,9 +61,10 @@ class DataCalculationTask:
 
         for city, data in self.data:
             days = {}
+            city_forecasts[city] = {}
             
             for forecast in data["forecasts"]:
-                hours = self.select_forecast_hours(forecast)
+                hours = self.select_forecast_hours(forecast["hours"])
                 if not hours:
                     continue
                 days[forecast["date"]] = {
@@ -74,19 +75,13 @@ class DataCalculationTask:
                 #     "temperature_avg": self.calculate_avg_temperature(hours) if hours else None,
                 #     "pleasant_hours": self.calculate_comfort_hours(hours) if hours else None,
                 # }
-
-
-
-            city_forecasts[city] = {}
-            city_forecasts[city]["forecast_days"] = days
-            
-            # self.city_aggregations[city] = {}
             temperature_total_avg = sum(days[day]["temperature_avg"] for day in days) / len(days)
-            print(f"temperature_total_avg: {temperature_total_avg}")
-            city_forecasts[city]["temperature_total_avg"] = temperature_total_avg
-
             hours_total_avg = sum(days[day]["pleasant_hours"] for day in days) / len(days)
+
+            city_forecasts[city]["forecast_days"] = days
+            city_forecasts[city]["temperature_total_avg"] = temperature_total_avg
             city_forecasts[city]["hours_total_avg"] = hours_total_avg
+
         logger.info(f"forecasts_data: {city_forecasts}")
         return city_forecasts
 
