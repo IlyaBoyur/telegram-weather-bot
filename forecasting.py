@@ -1,15 +1,12 @@
 import logging
 
-# import threading
-# import subprocess
-import multiprocessing
-
-
-
 from api_client import YandexWeatherAPI
-from constants import FORECAST_TARGET_HOURS, PLEASANT_CONDITIONS
-from tasks import DataAggregationTask, DataAnalyzingTask, DataCalculationTask, DataFetchingTask
-
+from tasks import (
+    DataAggregationTask,
+    DataAnalyzingTask,
+    DataCalculationTask,
+    DataFetchingTask,
+)
 
 logger = logging.getLogger()
 
@@ -17,17 +14,19 @@ logger = logging.getLogger()
 def forecast_weather():
     """Анализ погодных условий по городам"""
 
-    rough_data =  DataFetchingTask(YandexWeatherAPI()).worker()
+    rough_data = DataFetchingTask(YandexWeatherAPI()).worker()
     forecasts_data = DataCalculationTask(rough_data).worker()
     aggregations_data = DataAggregationTask(forecasts_data).worker()
     dataset = DataAnalyzingTask(aggregations_data).worker()
     return dataset
 
 
-
-
 if __name__ == "__main__":
-    logging.basicConfig(format="[%(levelname)s] - %(asctime)s - %(message)s", level=logging.INFO, datefmt='%H:%M:%S')
+    logging.basicConfig(
+        format="[%(levelname)s] - %(asctime)s - %(message)s",
+        level=logging.INFO,
+        datefmt="%H:%M:%S",
+    )
 
     dataset = forecast_weather()
     # Write spreadsheet to disk
