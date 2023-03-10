@@ -20,7 +20,7 @@ class DataFetchingTask:
         except Exception as error:
             logger.error(ERROR_WEATHER_API.format(city=city, error=error))
 
-    def get_weather_data(self):
+    def worker(self):
         with ThreadPool() as pool:
             return pool.map(self.load_url, CITIES) 
 
@@ -87,6 +87,7 @@ class DataCalculationTask:
 
             hours_total_avg = sum(days[day]["pleasant_hours"] for day in days) / len(days)
             city_forecasts[city]["hours_total_avg"] = hours_total_avg
+        logger.info(f"forecasts_data: {city_forecasts}")
         return city_forecasts
 
 
@@ -115,7 +116,7 @@ class DataAggregationTask:
             )
             # self.city_ratings[city] = {"rating": number}
             self.city_aggregations[city]['rating'] = number
-
+        logger.info(f"aggregations_data: {self.city_aggregations}")
         return self.city_aggregations
 
 
@@ -127,21 +128,23 @@ class DataAnalyzingTask:
         
     def get_sorted_days(self):
         days_gen = (self.data[city]["forecast_days"] for city in self.data)
-        sorted_days = sorted(set(
+        unique_days = set(
             key for days in days_gen for key in days.keys() 
-        ))
+        )
+        sorted_days = sorted(unique_days)
         logger.info(f"unique days: {sorted_days}")
         return sorted_days
 
-    def get_unique_city_names(self):
+    def get_unique_cities(self):
         cities = sorted(set(self.data))
         logger.info(f"unique cities: {cities}")
         return cities
 
     def worker(self):
         import tablib
+
         sorted_days = self.get_sorted_days()
-        unique_city_names = self.get_unique_city_names()
+        cities = self.get_unique_cities()
 
         dataset = tablib.Dataset()
         dataset.headers = [
@@ -152,7 +155,7 @@ class DataAnalyzingTask:
             "Рейтинг",
         ]
 
-        for city in unique_city_names:
+        for city in cities:
             days = self.data[city]["forecast_days"]
 
             temperature_avg_days = [days.get(day, {}).get("temperature_avg", "") for day in sorted_days]
