@@ -1,11 +1,12 @@
 import logging
-from constants import ERROR_WEATHER_API, TIMEOUT_PERIOD,  FORECAST_TARGET_HOURS, PLEASANT_CONDITIONS
-from utils import CITIES, ERR_MESSAGE_TEMPLATE
-from multiprocessing import Process, Queue, Pool, current_process
 import queue
-from multiprocessing.dummy import Pool as ThreadPool
 from datetime import datetime
+from multiprocessing import Pool, Process, Queue, current_process
+from multiprocessing.dummy import Pool as ThreadPool
 
+from constants import (ERROR_WEATHER_API, FORECAST_TARGET_HOURS,
+                       PLEASANT_CONDITIONS)
+from utils import CITIES
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +49,9 @@ class DataCalculationTask:
         """Фильтрует прогнозные данные по времени"""
 
         hours = [
-            hour for hour in all_hours if int(hour["hour"]) in FORECAST_TARGET_HOURS
+            hour
+            for hour in all_hours
+            if int(hour["hour"]) in FORECAST_TARGET_HOURS
         ]
         return hours
 
@@ -58,7 +61,7 @@ class DataCalculationTask:
 
         temperature = sum(hour["temp"] for hour in hours) / len(hours)
         return temperature
-    
+
     @staticmethod
     def calculate_comfort_hours(hours):
         """Считает время без осадков за период"""
@@ -67,16 +70,6 @@ class DataCalculationTask:
             1 for hour in hours if hour["condition"] in PLEASANT_CONDITIONS
         )
         return pleasant_hours
-
-    # def calc_day_aggregates(self, hours):
-    #     hours = self.select_forecast_hours(all_hours)
-    #     if not hours:
-    #         return
-    #     return {
-    #         "temperature_avg": self.calculate_avg_temperature(hours),
-    #         "pleasant_hours": self.calculate_comfort_hours(hours),
-    #     }
-
 
     def calculate_city_data(self, data):
         days = {}
@@ -91,8 +84,12 @@ class DataCalculationTask:
             }
             days[forecast["date"]] = day
 
-        temperature_total_avg = sum(days[day]["temperature_avg"] for day in days) / len(days)
-        hours_total_avg = sum(days[day]["pleasant_hours"] for day in days) / len(days)
+        temperature_total_avg = sum(
+            days[day]["temperature_avg"] for day in days
+        ) / len(days)
+        hours_total_avg = sum(
+            days[day]["pleasant_hours"] for day in days
+        ) / len(days)
         city = {}
         city["city"] = data["city"]
         city["forecast_days"] = days
@@ -129,7 +126,7 @@ class DataAggregationTask:
                 f"   temp_avg:{city['temperature_total_avg']:5.2f}"
                 f"   hours_avg:{city['hours_total_avg']:5.2f}"
             )
-            city['rating'] = number
+            city["rating"] = number
         logger.debug(f"aggregations_data: {self.city_aggregations}")
         return self.city_aggregations
 
@@ -139,12 +136,11 @@ class DataAnalyzingTask:
 
     def __init__(self, cities):
         self.cities = cities
-        
+        self.all_days = self.get_sorted_days()
+
     def get_sorted_days(self):
         days_gen = (city["forecast_days"] for city in self.cities)
-        unique_days = set(
-            key for days in days_gen for key in days.keys() 
-        )
+        unique_days = set(key for days in days_gen for key in days.keys())
         sorted_days = sorted(unique_days)
         logger.info(f"unique days: {sorted_days}")
         return sorted_days
@@ -153,9 +149,11 @@ class DataAnalyzingTask:
     def prepare_city_rows(city, all_days):
         days = city["forecast_days"]
 
-        temperature_avg_days = [days.get(day, {}).get("temperature_avg", "") for day in all_days]
+        temperature_avg_days = [
+            days.get(day, {}).get("temperature_avg", "") for day in all_days
+        ]
         temperature_row = [
-            city['city'].lower().title(),
+            city["city"].lower().title(),
             "Температура, среднее",
             *[
                 f"{temperature:.1f}" if temperature else ""
