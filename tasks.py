@@ -5,6 +5,7 @@ from multiprocessing import Process
 from multiprocessing.dummy import Pool as ThreadPool
 from datetime import datetime
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -16,9 +17,12 @@ class DataFetchingTask:
 
     def load_url(self, city):
         try:
-            return city, self.api.get_forecasting(city)
+            result = city, self.api.get_forecasting(city)
         except Exception as error:
             logger.error(ERROR_WEATHER_API.format(city=city, error=error))
+            result = city, None
+        finally:
+            return result
 
     def worker(self):
         with ThreadPool() as pool:
@@ -29,9 +33,7 @@ class DataCalculationTask:
     """Вычисление погодных параметров"""
 
     def __init__(self, data):
-        self.data = data
-        # self.city_forecasts = {}
-        # self.city_aggregations = {}
+        self.data = [(city, forecast) for city, forecast in data if forecast is not None]
 
     @staticmethod
     def select_forecast_hours(all_hours):
@@ -56,31 +58,30 @@ class DataCalculationTask:
         )
         return pleasant_hours
 
+    def calculate_city_data(self, data):
+        days = {}
+        for forecast in data["forecasts"]:
+            hours = self.select_forecast_hours(forecast["hours"])
+            if not hours:
+                continue
+            days[forecast["date"]] = {
+                "temperature_avg": self.calculate_avg_temperature(hours),
+                "pleasant_hours": self.calculate_comfort_hours(hours),
+            }
+        temperature_total_avg = sum(days[day]["temperature_avg"] for day in days) / len(days)
+        hours_total_avg = sum(days[day]["pleasant_hours"] for day in days) / len(days)
+        city = {}
+        city["forecast_days"] = days
+        city["temperature_total_avg"] = temperature_total_avg
+        city["hours_total_avg"] = hours_total_avg
+        return city
+
     def worker(self):
-        city_forecasts = {}
 
-        for city, data in self.data:
-            days = {}
-            city_forecasts[city] = {}
-            
-            for forecast in data["forecasts"]:
-                hours = self.select_forecast_hours(forecast["hours"])
-                if not hours:
-                    continue
-                days[forecast["date"]] = {
-                    "temperature_avg": self.calculate_avg_temperature(hours),
-                    "pleasant_hours": self.calculate_comfort_hours(hours),
-                }
-                # days[forecast["date"]] = {
-                #     "temperature_avg": self.calculate_avg_temperature(hours) if hours else None,
-                #     "pleasant_hours": self.calculate_comfort_hours(hours) if hours else None,
-                # }
-            temperature_total_avg = sum(days[day]["temperature_avg"] for day in days) / len(days)
-            hours_total_avg = sum(days[day]["pleasant_hours"] for day in days) / len(days)
-
-            city_forecasts[city]["forecast_days"] = days
-            city_forecasts[city]["temperature_total_avg"] = temperature_total_avg
-            city_forecasts[city]["hours_total_avg"] = hours_total_avg
+        city_forecasts = {
+            city_name: self.calculate_city_data(data)
+            for city_name, data in self.data
+        }
 
         logger.info(f"forecasts_data: {city_forecasts}")
         return city_forecasts
@@ -91,7 +92,6 @@ class DataAggregationTask:
 
     def __init__(self, city_aggregations):
         self.city_aggregations = city_aggregations
-        # self.city_ratings = {}
 
     def worker(self):
         for number, city in enumerate(
@@ -109,7 +109,6 @@ class DataAggregationTask:
                 f"   temp_avg:{self.city_aggregations[city]['temperature_total_avg']:5.2f}"
                 f"   hours_avg:{self.city_aggregations[city]['hours_total_avg']:5.2f}"
             )
-            # self.city_ratings[city] = {"rating": number}
             self.city_aggregations[city]['rating'] = number
         logger.info(f"aggregations_data: {self.city_aggregations}")
         return self.city_aggregations
