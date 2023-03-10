@@ -1,7 +1,8 @@
 import logging
 from constants import ERROR_WEATHER_API, TIMEOUT_PERIOD,  FORECAST_TARGET_HOURS, PLEASANT_CONDITIONS
 from utils import CITIES, ERR_MESSAGE_TEMPLATE
-from multiprocessing import Process, Queue, Pool
+from multiprocessing import Process, Queue, Pool, current_process
+import queue
 from multiprocessing.dummy import Pool as ThreadPool
 from datetime import datetime
 
@@ -113,22 +114,6 @@ class DataAggregationTask:
         self.city_aggregations = city_aggregations
 
     def worker(self):
-        # for number, city in enumerate(
-        #     sorted(
-        #         self.city_aggregations,
-        #         key=lambda city: (
-        #             -self.city_aggregations[city]["temperature_total_avg"],
-        #             -self.city_aggregations[city]["hours_total_avg"],
-        #         ),
-        #     ),
-        #     1,
-        # ):
-        #     logger.info(
-        #         f"{number:3}) {city:15}"
-        #         f"   temp_avg:{self.city_aggregations[city]['temperature_total_avg']:5.2f}"
-        #         f"   hours_avg:{self.city_aggregations[city]['hours_total_avg']:5.2f}"
-        #     )
-        #     self.city_aggregations[city]['rating'] = number
         for number, city in enumerate(
             sorted(
                 self.city_aggregations,
@@ -166,31 +151,31 @@ class DataAnalyzingTask:
 
     @staticmethod
     def prepare_city_rows(city, all_days):
-            days = city["forecast_days"]
+        days = city["forecast_days"]
 
         temperature_avg_days = [days.get(day, {}).get("temperature_avg", "") for day in all_days]
         temperature_row = [
-                    city['city'].lower().title(),
-                    "Температура, среднее",
-                    *[
-                        f"{temperature:.1f}" if temperature else ""
-                        for temperature in temperature_avg_days
-                    ],
-                    f"{city['temperature_total_avg']:.1f}",
-                    city["rating"],
-                ]
+            city['city'].lower().title(),
+            "Температура, среднее",
+            *[
+                f"{temperature:.1f}" if temperature else ""
+                for temperature in temperature_avg_days
+            ],
+            f"{city['temperature_total_avg']:.1f}",
+            city["rating"],
+        ]
         hours_avg_days = [
             days.get(day, {}).get("pleasant_hours", "") for day in all_days
-            ]
+        ]
         hours_row = [
-                    "",
-                    "Без осадков, часов",
+            "",
+            "Без осадков, часов",
             *[f"{hours:.1f}" if hours else "" for hours in hours_avg_days],
-                    f"{city['hours_total_avg']:.1f}",
-                    "",
-                ]
+            f"{city['hours_total_avg']:.1f}",
+            "",
+        ]
         return temperature_row, hours_row
-
+    
     def prepare_city_rows_parallel(self, active: Queue, finished: Queue):
         while True:
             try:
