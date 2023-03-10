@@ -36,6 +36,7 @@ class DataCalculationTask:
         self.data = data
         self.unique_days = set()
         self.city_forecasts = {}
+        self.city_aggregations = {}
 
     @staticmethod
     def select_forecast_hours(forecast):
@@ -62,24 +63,62 @@ class DataCalculationTask:
 
     def worker(self):
         for city, data in self.data:
-            forecast_days = {}
+            days = {}
             
             for forecast in data["forecasts"]:
                 hours = self.select_forecast_hours(forecast)
                 if not hours:
                     continue
-                forecast_days[forecast["date"]] = {
+                days[forecast["date"]] = {
                     "temperature_avg": self.calculate_avg_temperature(hours),
                     "pleasant_hours": self.calculate_comfort_hours(hours),
                 }
+                # days[forecast["date"]] = {
+                #     "temperature_avg": self.calculate_avg_temperature(hours) if hours else None,
+                #     "pleasant_hours": self.calculate_comfort_hours(hours) if hours else None,
+                # }
 
-            self.city_forecasts[city] = {"forecast_days": forecast_days}
-            self.unique_days.update(forecast_days.keys())
+
+
+            self.city_forecasts[city] = {}
+            self.city_forecasts[city]["forecast_days"] = days
+            
+            self.city_aggregations[city] = {}
+            temperature_total_avg = sum(days[day]["temperature_avg"] for day in days) / len(days)
+            print(f"temperature_total_avg: {temperature_total_avg}")
+            self.city_aggregations[city]["temperature_total_avg"] = temperature_total_avg
+
+            hours_total_avg = sum(days[day]["pleasant_hours"] for day in days) / len(days)
+            self.city_aggregations[city]["hours_total_avg"] = hours_total_avg
+
+            self.unique_days.update(days.keys())
 
 
 class DataAggregationTask:
     """Объединение вычисленных данных"""
-    pass
+
+    def __init__(self, city_aggregations):
+        self.city_aggregations = city_aggregations
+        self.city_ratings = {}
+
+    def worker(self):
+        for number, city in enumerate(
+            sorted(
+                self.city_aggregations,
+                key=lambda city: (
+                    -self.city_aggregations[city]["temperature_total_avg"],
+                    -self.city_aggregations[city]["hours_total_avg"],
+                ),
+            ),
+            1,
+        ):
+            logger.info(
+                f"{number:3}) {city:15}"
+                f"   temp_avg:{self.city_aggregations[city]['temperature_total_avg']:5.2f}"
+                f"   hours_avg:{self.city_aggregations[city]['hours_total_avg']:5.2f}"
+            )
+            self.city_ratings[city] = {"rating": number}
+
 
 
 class DataAnalyzingTask:
