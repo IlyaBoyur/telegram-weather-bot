@@ -156,7 +156,6 @@ class DataAnalyzingTask:
         self.cities = cities
         
     def get_sorted_days(self):
-        # days_gen = (self.data[city]["forecast_days"] for city in self.data)
         days_gen = (city["forecast_days"] for city in self.cities)
         unique_days = set(
             key for days in days_gen for key in days.keys() 
@@ -165,16 +164,37 @@ class DataAnalyzingTask:
         logger.info(f"unique days: {sorted_days}")
         return sorted_days
 
-    # def get_unique_cities(self):
-    #     cities = sorted(set(self.data))
-    #     logger.info(f"unique cities: {cities}")
-    #     return cities
+    @staticmethod
+    def prepare_city_rows(city, all_days):
+            days = city["forecast_days"]
+
+        temperature_avg_days = [days.get(day, {}).get("temperature_avg", "") for day in all_days]
+        temperature_row = [
+                    city['city'].lower().title(),
+                    "Температура, среднее",
+                    *[
+                        f"{temperature:.1f}" if temperature else ""
+                        for temperature in temperature_avg_days
+                    ],
+                    f"{city['temperature_total_avg']:.1f}",
+                    city["rating"],
+                ]
+        hours_avg_days = [
+            days.get(day, {}).get("pleasant_hours", "") for day in all_days
+            ]
+        hours_row = [
+                    "",
+                    "Без осадков, часов",
+            *[f"{hours:.1f}" if hours else "" for hours in hours_avg_days],
+                    f"{city['hours_total_avg']:.1f}",
+                    "",
+                ]
+        return temperature_row, hours_row
 
     def worker(self):
         import tablib
 
         sorted_days = self.get_sorted_days()
-        # cities = self.get_unique_cities()
 
         dataset = tablib.Dataset()
         dataset.headers = [
@@ -185,36 +205,7 @@ class DataAnalyzingTask:
             "Рейтинг",
         ]
 
-        # for city_name in cities:
-            # city = self.data[city_name]
         for city in self.cities:
-            days = city["forecast_days"]
-
-            temperature_avg_days = [days.get(day, {}).get("temperature_avg", "") for day in sorted_days]
-            dataset.append(
-                [
-                    # city_name.lower().title(),
-                    city['city'].lower().title(),
-                    "Температура, среднее",
-                    *[
-                        f"{temperature:.1f}" if temperature else ""
-                        for temperature in temperature_avg_days
-                    ],
-                    f"{city['temperature_total_avg']:.1f}",
-                    city["rating"],
-                ]
-            )
-
-            pleasant_hours_avg_days = [
-                days.get(day, {}).get("pleasant_hours", "") for day in sorted_days
-            ]
-            dataset.append(
-                [
-                    "",
-                    "Без осадков, часов",
-                    *[f"{hours:.1f}" if hours else "" for hours in pleasant_hours_avg_days],
-                    f"{city['hours_total_avg']:.1f}",
-                    "",
-                ]
-            )
+            rows = self.prepare_city_rows(city, sorted_days)
+            dataset.extend(rows)
         return dataset
