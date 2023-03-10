@@ -18,8 +18,7 @@ def forecast_weather():
     """Анализ погодных условий по городам"""
 
     # data request
-    task = DataFetchingTask(YandexWeatherAPI())
-    rough_data = task.get_weather_data()
+    rough_data =  DataFetchingTask(YandexWeatherAPI()).get_weather_data()
 
     # weather params
     # unique_days = set()

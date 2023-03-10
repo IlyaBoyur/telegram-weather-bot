@@ -1,8 +1,9 @@
 import logging
-from concurrent.futures import ProcessPoolExecutor
-from constants import ERROR_WEATHER_API, TIMEOUT_PERIOD
+from constants import ERROR_WEATHER_API, TIMEOUT_PERIOD,  FORECAST_TARGET_HOURS, PLEASANT_CONDITIONS
 from utils import CITIES, ERR_MESSAGE_TEMPLATE
-from constants import FORECAST_TARGET_HOURS, PLEASANT_CONDITIONS
+from multiprocessing import Process
+from multiprocessing.dummy import Pool as ThreadPool
+
 
 logger = logging.getLogger(__name__)
 
@@ -20,13 +21,8 @@ class DataFetchingTask:
             logger.error(ERROR_WEATHER_API.format(city=city, error=error))
 
     def get_weather_data(self):
-        with ProcessPoolExecutor() as pool:
-            # rough_data = pool.map(DataFetchingTask(YandexWeatherAPI()).run, CITIES)
-            try:
-                return pool.map(self.load_url, CITIES, timeout=TIMEOUT_PERIOD)
-            except TimeoutError as error:
-                logger.error(error)
-                raise RuntimeError()
+        with ThreadPool() as pool:
+            return pool.map(self.load_url, CITIES) 
 
 
 class DataCalculationTask:
