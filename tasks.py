@@ -1,7 +1,7 @@
 import logging
 from constants import ERROR_WEATHER_API, TIMEOUT_PERIOD,  FORECAST_TARGET_HOURS, PLEASANT_CONDITIONS
 from utils import CITIES, ERR_MESSAGE_TEMPLATE
-from multiprocessing import Process
+from multiprocessing import Process, Queue
 from multiprocessing.dummy import Pool as ThreadPool
 from datetime import datetime
 
@@ -17,18 +17,19 @@ class DataFetchingTask:
 
     def load_url(self, city):
         try:
-            result = city, self.api.get_forecasting(city)
+            json_response = self.api.get_forecasting(city)
+            result = dict(city=city, **json_response)
         except Exception as error:
             logger.error(ERROR_WEATHER_API.format(city=city, error=error))
-            result = city, None
+            result = None
         finally:
             return result
 
     def worker(self):
         with ThreadPool() as pool:
             return [
-                (city, forecast)
-                for city, forecast in pool.map(self.load_url, CITIES)
+                forecast
+                for forecast in pool.map(self.load_url, CITIES)
                 if forecast is not None
             ] 
 
@@ -73,6 +74,7 @@ class DataCalculationTask:
     #         "pleasant_hours": self.calculate_comfort_hours(hours),
     #     }
 
+    # def calculate_city_data(self, queue_in, queue_out):
     def calculate_city_data(self, data):
         days = {}
 
@@ -89,18 +91,33 @@ class DataCalculationTask:
         temperature_total_avg = sum(days[day]["temperature_avg"] for day in days) / len(days)
         hours_total_avg = sum(days[day]["pleasant_hours"] for day in days) / len(days)
         city = {}
+        city["city"] = data["city"]
         city["forecast_days"] = days
         city["temperature_total_avg"] = temperature_total_avg
         city["hours_total_avg"] = hours_total_avg
         return city
 
     def worker(self):
-
-        city_forecasts = {
-            city_name: self.calculate_city_data(data)
-            for city_name, data in self.data
-        }
-
+        # queue_in = Queue()
+        # queue_out = Queue()
+        # [queue.put(data) for _, data in self.data]
+        # processes = [
+        #     Process(target=self.calculate_city_data, args=(queue_in, queue_out))
+        # ]
+        # [process.start() for process in processes]
+        # [process.join() for process in processes]
+        # city_forecasts = {
+        #     city_name: self.calculate_city_data(data)
+        #     for city_name, data in self.data
+        # }
+        # city_forecasts = {
+        #     data["city"]: self.calculate_city_data(data)
+        #     for data in self.data
+        # }
+        city_forecasts = [
+            self.calculate_city_data(city) for city in self.data
+        ]
+        # city_forecasts = [queue_out.get() for _ in range(queue_out.qsize())]
         logger.info(f"forecasts_data: {city_forecasts}")
         return city_forecasts
 
@@ -112,22 +129,38 @@ class DataAggregationTask:
         self.city_aggregations = city_aggregations
 
     def worker(self):
+        # for number, city in enumerate(
+        #     sorted(
+        #         self.city_aggregations,
+        #         key=lambda city: (
+        #             -self.city_aggregations[city]["temperature_total_avg"],
+        #             -self.city_aggregations[city]["hours_total_avg"],
+        #         ),
+        #     ),
+        #     1,
+        # ):
+        #     logger.info(
+        #         f"{number:3}) {city:15}"
+        #         f"   temp_avg:{self.city_aggregations[city]['temperature_total_avg']:5.2f}"
+        #         f"   hours_avg:{self.city_aggregations[city]['hours_total_avg']:5.2f}"
+        #     )
+        #     self.city_aggregations[city]['rating'] = number
         for number, city in enumerate(
             sorted(
                 self.city_aggregations,
                 key=lambda city: (
-                    -self.city_aggregations[city]["temperature_total_avg"],
-                    -self.city_aggregations[city]["hours_total_avg"],
+                    -city["temperature_total_avg"],
+                    -city["hours_total_avg"],
                 ),
             ),
             1,
         ):
             logger.info(
-                f"{number:3}) {city:15}"
-                f"   temp_avg:{self.city_aggregations[city]['temperature_total_avg']:5.2f}"
-                f"   hours_avg:{self.city_aggregations[city]['hours_total_avg']:5.2f}"
+                f"{number:3}) {city['city']:15}"
+                f"   temp_avg:{city['temperature_total_avg']:5.2f}"
+                f"   hours_avg:{city['hours_total_avg']:5.2f}"
             )
-            self.city_aggregations[city]['rating'] = number
+            city['rating'] = number
         logger.info(f"aggregations_data: {self.city_aggregations}")
         return self.city_aggregations
 
@@ -139,7 +172,8 @@ class DataAnalyzingTask:
         self.data = initial_data
         
     def get_sorted_days(self):
-        days_gen = (self.data[city]["forecast_days"] for city in self.data)
+        # days_gen = (self.data[city]["forecast_days"] for city in self.data)
+        days_gen = (city["forecast_days"] for city in self.data)
         unique_days = set(
             key for days in days_gen for key in days.keys() 
         )
@@ -147,16 +181,16 @@ class DataAnalyzingTask:
         logger.info(f"unique days: {sorted_days}")
         return sorted_days
 
-    def get_unique_cities(self):
-        cities = sorted(set(self.data))
-        logger.info(f"unique cities: {cities}")
-        return cities
+    # def get_unique_cities(self):
+    #     cities = sorted(set(self.data))
+    #     logger.info(f"unique cities: {cities}")
+    #     return cities
 
     def worker(self):
         import tablib
 
         sorted_days = self.get_sorted_days()
-        cities = self.get_unique_cities()
+        # cities = self.get_unique_cities()
 
         dataset = tablib.Dataset()
         dataset.headers = [
@@ -167,14 +201,16 @@ class DataAnalyzingTask:
             "Рейтинг",
         ]
 
-        for city_name in cities:
-            city = self.data[city_name]
+        # for city_name in cities:
+            # city = self.data[city_name]
+        for city in self.data:
             days = city["forecast_days"]
 
             temperature_avg_days = [days.get(day, {}).get("temperature_avg", "") for day in sorted_days]
             dataset.append(
                 [
-                    city_name.lower().title(),
+                    # city_name.lower().title(),
+                    city['city'].lower().title(),
                     "Температура, среднее",
                     *[
                         f"{temperature:.1f}" if temperature else ""
