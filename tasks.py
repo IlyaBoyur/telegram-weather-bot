@@ -149,20 +149,20 @@ class DataAnalyzingTask:
             "Рейтинг",
         ]
 
-        for city in cities:
-            days = self.data[city]["forecast_days"]
+        for city_name in cities:
+            days = self.data[city_name]["forecast_days"]
 
             temperature_avg_days = [days.get(day, {}).get("temperature_avg", "") for day in sorted_days]
             dataset.append(
                 [
-                    city.lower().title(),
+                    city_name.lower().title(),
                     "Температура, среднее",
                     *[
                         f"{temperature:.1f}" if temperature else ""
                         for temperature in temperature_avg_days
                     ],
-                    f"{self.data[city]['temperature_total_avg']:.1f}",
-                    self.data[city]["rating"],
+                    f"{self.data[city_name]['temperature_total_avg']:.1f}",
+                    self.data[city_name]["rating"],
                 ]
             )
 
@@ -174,7 +174,7 @@ class DataAnalyzingTask:
                     "",
                     "Без осадков, часов",
                     *[f"{hours:.1f}" if hours else "" for hours in pleasant_hours_avg_days],
-                    f"{self.data[city]['hours_total_avg']:.1f}",
+                    f"{self.data[city_name]['hours_total_avg']:.1f}",
                     "",
                 ]
             )
