@@ -3,9 +3,14 @@ import queue
 from datetime import datetime
 from multiprocessing import Pool, Process, Queue, current_process
 from multiprocessing.dummy import Pool as ThreadPool
+from typing import Any, Dict, List
 
-from constants import (ERROR_WEATHER_API, FORECAST_TARGET_HOURS,
-                       PLEASANT_CONDITIONS)
+from api_client import YandexWeatherAPI
+from constants import (
+    ERROR_WEATHER_API,
+    FORECAST_TARGET_HOURS,
+    PLEASANT_CONDITIONS,
+)
 from utils import CITIES
 
 logger = logging.getLogger(__name__)
@@ -14,10 +19,10 @@ logger = logging.getLogger(__name__)
 class DataFetchingTask:
     """Получение данных через API"""
 
-    def __init__(self, api):
+    def __init__(self, api: YandexWeatherAPI):
         self.api = api
 
-    def load_url(self, city):
+    def load_url(self, city: str):
         try:
             json_response = self.api.get_forecasting(city)
             result = dict(city=city, **json_response)
@@ -41,11 +46,11 @@ class DataFetchingTask:
 class DataCalculationTask:
     """Вычисление погодных параметров"""
 
-    def __init__(self, cities):
+    def __init__(self, cities: List[Any]):
         self.cities = cities
 
     @staticmethod
-    def select_forecast_hours(all_hours):
+    def select_forecast_hours(all_hours: List[Dict[str, Any]]):
         """Фильтрует прогнозные данные по времени"""
 
         hours = [
@@ -56,14 +61,14 @@ class DataCalculationTask:
         return hours
 
     @staticmethod
-    def calculate_avg_temperature(hours):
+    def calculate_avg_temperature(hours: List[Dict[str, Any]]):
         """Считает среднюю температуру за период"""
 
         temperature = sum(hour["temp"] for hour in hours) / len(hours)
         return temperature
 
     @staticmethod
-    def calculate_comfort_hours(hours):
+    def calculate_comfort_hours(hours: List[Dict[str, Any]]):
         """Считает время без осадков за период"""
 
         pleasant_hours = sum(
@@ -71,7 +76,7 @@ class DataCalculationTask:
         )
         return pleasant_hours
 
-    def calculate_city_data(self, data):
+    def calculate_city_data(self, data: Dict[str, Any]):
         days = {}
 
         for forecast in data["forecasts"]:
@@ -90,11 +95,12 @@ class DataCalculationTask:
         hours_total_avg = sum(
             days[day]["pleasant_hours"] for day in days
         ) / len(days)
-        city = {}
-        city["city"] = data["city"]
-        city["forecast_days"] = days
-        city["temperature_total_avg"] = temperature_total_avg
-        city["hours_total_avg"] = hours_total_avg
+        city = {
+            "city": data["city"],
+            "forecast_days": days,
+            "temperature_total_avg": temperature_total_avg,
+            "hours_total_avg": hours_total_avg,
+        }
         return city
 
     def worker(self):
@@ -107,7 +113,7 @@ class DataCalculationTask:
 class DataAggregationTask:
     """Объединение вычисленных данных"""
 
-    def __init__(self, city_aggregations):
+    def __init__(self, city_aggregations: List[Any]):
         self.city_aggregations = city_aggregations
 
     def worker(self):
@@ -134,19 +140,20 @@ class DataAggregationTask:
 class DataAnalyzingTask:
     """Финальный анализ и получение результата"""
 
-    def __init__(self, cities):
+    def __init__(self, cities: List[Any]):
         self.cities = cities
-        self.all_days = self.get_sorted_days()
+        self.all_days = self.get_sorted_days(cities)
 
-    def get_sorted_days(self):
-        days_gen = (city["forecast_days"] for city in self.cities)
+    @staticmethod
+    def get_sorted_days(cities: List[Any]):
+        days_gen = (city["forecast_days"] for city in cities)
         unique_days = set(key for days in days_gen for key in days.keys())
         sorted_days = sorted(unique_days)
         logger.info(f"unique days: {sorted_days}")
         return sorted_days
 
     @staticmethod
-    def prepare_city_rows(city, all_days):
+    def prepare_city_rows(city: Dict[str, Any], all_days: List[str]):
         days = city["forecast_days"]
 
         temperature_avg_days = [
