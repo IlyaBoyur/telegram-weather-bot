@@ -90,3 +90,24 @@ city_name = "MOSCOW"
 ywAPI = YandexWeatherAPI()
 resp = ywAPI.get_forecasting(city_name)
 ```
+
+## Запуск проекта
+### 1) Установить локальное окружение
+```shell
+$ python3 -m venv venv
+$ venv/bin/activate # Windows (Git Bash): source venv/Scripts/activate
+```
+
+### 2) Установить зависимости
+```shell
+$ pip install -r requirements.txt
+```
+
+### 3) Запуск
+```shell
+$ python3 forecasting.py
+```
+
+```forecasts.xls``` в папке проекта содержит результат анализа
+
+
