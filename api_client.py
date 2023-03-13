@@ -1,10 +1,19 @@
-import logging
 import json
+import logging
+from http import HTTPStatus
 from urllib.request import urlopen
 
 from utils import CITIES, ERR_MESSAGE_TEMPLATE
 
 logger = logging.getLogger()
+
+ERROR_HTTP = "Error during execute request. {status}: {reason}"
+ERROR_NO_CITY = "Please check that city {city} exists"
+ERROR_RESPONSE = "Invalid response format: {error}"
+
+
+class YandexWeatherAPIError(RuntimeError):
+    pass
 
 
 class YandexWeatherAPI:
@@ -16,26 +25,27 @@ class YandexWeatherAPI:
     def _do_req(url):
         """Base request method"""
         try:
-            with urlopen(url) as req:
-                resp = req.read().decode("utf-8")
-                resp = json.loads(resp)
-            if req.status != 200:
-                raise Exception(
-                    "Error during execute request. {}: {}".format(
-                        resp.status, resp.reason
-                    )
+            with urlopen(url) as request:
+                response = request.read().decode("utf-8")
+                result = json.loads(response)
+            if HTTPStatus.OK != request.status:
+                raise YandexWeatherAPIError(
+                    ERROR_HTTP.format(response.status, response.reason)
                 )
-            return resp
-        except Exception as ex:
-            logger.error(ex)
-            raise Exception(ERR_MESSAGE_TEMPLATE)
+            return result
+        except (TypeError, json.decoder.JSONDecodeError) as error:
+            logger.error(ERROR_RESPONSE.format(error))
+            raise RuntimeError(error)
+        except YandexWeatherAPIError as error:
+            logger.error(error)
+            raise RuntimeError(ERR_MESSAGE_TEMPLATE)
 
     @staticmethod
     def _get_url_by_city_name(city_name: str) -> str:
         try:
             return CITIES[city_name]
         except KeyError:
-            raise Exception("Please check that city {} exists".format(city_name))
+            raise Exception(ERROR_NO_CITY.format(city=city_name))
 
     def get_forecasting(self, city_name: str):
         """
