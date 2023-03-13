@@ -26,7 +26,7 @@ class DataFetchingTask:
         try:
             json_response = self.api.get_forecasting(city)
             result = dict(city=city, **json_response)
-        except Exception as error:
+        except RuntimeError as error:
             logger.error(ERROR_WEATHER_API.format(city=city, error=error))
             result = None
         finally:
