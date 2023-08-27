@@ -12,13 +12,16 @@ logger = logging.getLogger()
 
 
 def forecast_weather():
-    """Анализ погодных условий по городам"""
-
-    rough_data = DataFetchingTask(YandexWeatherAPI()).worker()
-    forecasts_data = DataCalculationTask(rough_data).worker()
-    aggregations_data = DataAggregationTask(forecasts_data).worker()
-    dataset = DataAnalyzingTask(aggregations_data).worker()
-    return dataset
+    """Анализ погодных условий по городам."""
+    data = YandexWeatherAPI()
+    for task in [
+        DataFetchingTask,
+        DataCalculationTask,
+        DataAggregationTask,
+        DataAnalyzingTask,
+    ]:
+        data = task(data).worker()
+    return data
 
 
 if __name__ == "__main__":
