@@ -1,9 +1,17 @@
 import json
 import logging
 from http import HTTPStatus
-from urllib.request import urlopen
+from urllib.error import HTTPError
+from urllib.parse import urlencode
+from urllib.request import Request, urlopen
 
-from utils import CITIES, ERR_MESSAGE_TEMPLATE
+from utils import (
+    CITIES,
+    ERR_MESSAGE_TEMPLATE,
+    YANDEX_API_KEY,
+    YANDEX_API_LANGUAGE,
+    YANDEX_WEATHER_API_URL,
+)
 
 logger = logging.getLogger()
 
@@ -22,10 +30,12 @@ class YandexWeatherAPI:
     """
 
     @staticmethod
-    def _do_req(url):
+    def _do_req(url: str):
         """Base request method"""
         try:
-            with urlopen(url) as request:
+            with urlopen(
+                Request(url, headers={"X-Yandex-API-Key": YANDEX_API_KEY})
+            ) as request:
                 response = request.read().decode("utf-8")
                 result = json.loads(response)
             if HTTPStatus.OK != request.status:
@@ -42,10 +52,18 @@ class YandexWeatherAPI:
 
     @staticmethod
     def _get_url_by_city_name(city_name: str) -> str:
-        try:
-            return CITIES[city_name]
-        except KeyError:
+        if (city := CITIES.get(city_name)) is None:
             raise RuntimeError(ERROR_NO_CITY.format(city=city_name))
+        lat, lon = city
+        query = urlencode(
+            {
+                "lat": lat,
+                "lon": lon,
+                "lang": YANDEX_API_LANGUAGE,
+                "limit": 1,
+            }
+        )
+        return f"{YANDEX_WEATHER_API_URL}?{query}"
 
     def get_forecasting(self, city_name: str):
         """
