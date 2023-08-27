@@ -36,9 +36,9 @@ class YandexWeatherAPI:
         except (TypeError, json.decoder.JSONDecodeError) as error:
             logger.error(ERROR_RESPONSE.format(error))
             raise RuntimeError(error)
-        except YandexWeatherAPIError as error:
-            logger.error(error)
-            raise RuntimeError(ERR_MESSAGE_TEMPLATE)
+        except (HTTPError, YandexWeatherAPIError):
+            logger.exception(ERR_MESSAGE_TEMPLATE)
+            raise RuntimeError
 
     @staticmethod
     def _get_url_by_city_name(city_name: str) -> str:
