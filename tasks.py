@@ -1,3 +1,4 @@
+import abc
 import logging
 import queue
 from datetime import datetime
@@ -16,7 +17,13 @@ from utils import CITIES
 logger = logging.getLogger(__name__)
 
 
-class DataFetchingTask:
+class Task(abc.ABC):
+    @abc.abstractmethod
+    def worker(self) -> Any:
+        pass
+
+
+class DataFetchingTask(Task):
     """Получение данных через API"""
 
     def __init__(self, api: YandexWeatherAPI):
@@ -43,7 +50,7 @@ class DataFetchingTask:
             return data
 
 
-class DataCalculationTask:
+class DataCalculationTask(Task):
     """Вычисление погодных параметров"""
 
     def __init__(self, cities: List[Any]):
@@ -110,7 +117,7 @@ class DataCalculationTask:
         return city_forecasts
 
 
-class DataAggregationTask:
+class DataAggregationTask(Task):
     """Объединение вычисленных данных"""
 
     def __init__(self, city_aggregations: List[Any]):
@@ -137,7 +144,7 @@ class DataAggregationTask:
         return self.city_aggregations
 
 
-class DataAnalyzingTask:
+class DataAnalyzingTask(Task):
     """Финальный анализ и получение результата"""
 
     def __init__(self, cities: List[Any]):
