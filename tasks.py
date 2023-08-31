@@ -56,12 +56,12 @@ class DataFetchingTask(Task):
 class DataCalculationTask(Task):
     """Вычисление погодных параметров."""
 
-    def __init__(self, cities: List[Any]):
-        self.cities = cities
+    def __init__(self, forecasts: List[Any]):
+        self.forecasts = forecasts
 
     @staticmethod
     def select_forecast_hours(all_hours: List[Dict[str, Any]]):
-        """Фильтрует прогнозные данные по времени"""
+        """Фильтрует прогнозные данные по времени."""
 
         hours = [
             hour
@@ -106,7 +106,8 @@ class DataCalculationTask(Task):
             days[day]["pleasant_hours"] for day in days
         ) / len(days)
         city = {
-            "city": data["city"],
+            "city": data["geo_object"]["locality"]["name"],
+            "location": data["location"],
             "forecast_days": days,
             "temperature_total_avg": temperature_total_avg,
             "hours_total_avg": hours_total_avg,
@@ -115,7 +116,7 @@ class DataCalculationTask(Task):
 
     def worker(self):
         with Pool() as pool:
-            city_forecasts = pool.map(self.calculate_city_data, self.cities)
+            city_forecasts = pool.map(self.calculate_city_data, self.forecasts)
         logger.debug(f"forecasts_data: {city_forecasts}")
         return city_forecasts
 
