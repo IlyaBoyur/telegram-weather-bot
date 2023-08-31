@@ -28,18 +28,16 @@ class Task(abc.ABC):
 class DataFetchingTask(Task):
     """Получение данных через API."""
 
-    def __init__(
-        self, api: YandexWeatherAPI, cities: Optional[List[str]] = None
-    ):
+    def __init__(self, api: YandexWeatherAPI, locations: List[str]):
         self.api = api
-        self.cities = cities or CITIES
+        self.locations = locations
 
-    def load_url(self, city: str):
+    def load_url(self, location: Union[str, Tuple[float, float]]):
         try:
-            json_response = self.api.get_forecasting(city)
-            result = dict(city=city, **json_response)
+            json_response = self.api.get_forecasting(location)
+            result = dict(location=location, **json_response)
         except RuntimeError as error:
-            logger.error(ERROR_WEATHER_API.format(city=city, error=error))
+            logger.error(ERROR_WEATHER_API.format(city=location, error=error))
             result = None
         finally:
             return result
@@ -48,7 +46,7 @@ class DataFetchingTask(Task):
         with ThreadPool() as pool:
             data = [
                 forecast
-                for forecast in pool.map(self.load_url, self.cities)
+                for forecast in pool.map(self.load_url, self.locations)
                 if forecast is not None
             ]
             logger.debug(f"DataFetchingTask output: {data}")
