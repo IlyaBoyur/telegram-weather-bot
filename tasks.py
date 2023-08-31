@@ -4,10 +4,12 @@ import queue
 from datetime import datetime
 from multiprocessing import Pool, Process, Queue, current_process
 from multiprocessing.dummy import Pool as ThreadPool
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple, Union
 
-from api_client import YandexWeatherAPI
+from api_client import YandexGeoAPI, YandexWeatherAPI
 from constants import (
+    ERROR_GEO_API,
+    ERROR_GEO_PARSING_API,
     ERROR_WEATHER_API,
     FORECAST_TARGET_HOURS,
     PLEASANT_CONDITIONS,
@@ -231,3 +233,70 @@ class DataAnalyzingTask(Task):
         while not queue_out.empty():
             dataset.extend(queue_out.get())
         return dataset
+
+
+class GeoDataFetchingTask(Task):
+    """Получение данных через API Геокодера."""
+
+    def __init__(
+        self, api: YandexGeoAPI, addresses: Optional[List[str]] = None
+    ):
+        self.api = api
+        self.addresses = addresses or CITIES
+
+    def load_url(self, address: str):
+        try:
+            json_response = self.api.get_geolocation(address)
+            result = dict(address=address, **json_response)
+        except RuntimeError as error:
+            logger.error(ERROR_GEO_API.format(address=address, error=error))
+            result = None
+        finally:
+            return result
+
+    def worker(self) -> List[Any]:
+        with ThreadPool() as pool:
+            data = [
+                location
+                for location in pool.map(self.load_url, self.addresses)
+                if location is not None
+            ]
+            logger.debug(f"DataFetchingTask output: {data}")
+            return data
+
+
+class GeoDataParsingTask(Task):
+    """Определение координат геообъекта."""
+
+    def __init__(self, locations: list[Any]):
+        self.locations = locations
+
+    @staticmethod
+    def get_coordinates(location) -> tuple[float, float]:
+        try:
+            collection = location["response"]["GeoObjectCollection"]
+            count = collection["metaDataProperty"]["GeocoderResponseMetaData"][
+                "found"
+            ]
+            if count != "1":
+                logger.warning(
+                    f"To many locations has been found: {count}. First location is used"
+                )
+            longitude, latitude = collection["featureMember"][0]["GeoObject"][
+                "Point"
+            ]["pos"].split()[:2]
+            return float(latitude), float(longitude)
+        except (TypeError, KeyError, RuntimeError) as error:
+            raise RuntimeError(
+                ERROR_GEO_PARSING_API.format(error=error, address=location)
+            )
+
+    def worker(self) -> List[Any]:
+        with Pool() as pool:
+            data = [
+                coords
+                for coords in pool.map(self.get_coordinates, self.locations)
+                if coords is not None
+            ]
+            logger.debug(f"GeoDataParsingTask output: {data}")
+            return data
