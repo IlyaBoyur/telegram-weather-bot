@@ -5,9 +5,14 @@ from dotenv import load_dotenv
 load_dotenv()
 
 DEBUG = os.getenv("DEBUG", "False") == "True"
-YANDEX_WEATHER_API_URL = os.getenv("YANDEX_WEATHER_API_URL", "")
-YANDEX_API_KEY = os.getenv("YANDEX_API_KEY", "")
-YANDEX_API_LANGUAGE = os.getenv("YANDEX_API_LANGUAGE", "ru_RU")
+ERR_MESSAGE_TEMPLATE = "Something wrong. Please contact with mentor."
+MIN_MAJOR_PYTHON_VER = 3
+MIN_MINOR_PYTHON_VER = 9
+
+YANDEX_WEATHER_API_URL = os.getenv("YANDEX_WEATHER_API_URL")
+YANDEX_WEATHER_API_KEY = os.getenv("YANDEX_WEATHER_API_KEY")
+YANDEX_WEATHER_API_LANGUAGE = os.getenv("YANDEX_WEATHER_API_LANGUAGE", "ru_RU")
+
 
 if DEBUG:
     CITIES = {
@@ -45,11 +50,6 @@ else:
         "ROMA": [41.887064, 12.504809],
         "CAIRO": [30.050755, 31.246909],
     }
-
-ERR_MESSAGE_TEMPLATE = "Something wrong. Please contact with mentor."
-
-MIN_MAJOR_PYTHON_VER = 3
-MIN_MINOR_PYTHON_VER = 9
 
 
 def check_python_version():
