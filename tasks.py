@@ -4,7 +4,7 @@ import queue
 from datetime import datetime
 from multiprocessing import Pool, Process, Queue, current_process
 from multiprocessing.dummy import Pool as ThreadPool
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from api_client import YandexWeatherAPI
 from constants import (
@@ -26,8 +26,11 @@ class Task(abc.ABC):
 class DataFetchingTask(Task):
     """Получение данных через API"""
 
-    def __init__(self, api: YandexWeatherAPI):
+    def __init__(
+        self, api: YandexWeatherAPI, cities: Optional[List[str]] = None
+    ):
         self.api = api
+        self.cities = cities or CITIES
 
     def load_url(self, city: str):
         try:
@@ -43,7 +46,7 @@ class DataFetchingTask(Task):
         with ThreadPool() as pool:
             data = [
                 forecast
-                for forecast in pool.map(self.load_url, CITIES)
+                for forecast in pool.map(self.load_url, self.cities)
                 if forecast is not None
             ]
             logger.debug(f"DataFetchingTask output: {data}")
