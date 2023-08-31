@@ -4,7 +4,7 @@ import queue
 from datetime import datetime
 from multiprocessing import Pool, Process, Queue, current_process
 from multiprocessing.dummy import Pool as ThreadPool
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Tuple, Union
 
 from api_client import YandexGeoAPI, YandexWeatherAPI
 from constants import (
@@ -14,7 +14,6 @@ from constants import (
     FORECAST_TARGET_HOURS,
     PLEASANT_CONDITIONS,
 )
-from utils import CITIES
 
 logger = logging.getLogger(__name__)
 
@@ -237,11 +236,9 @@ class DataAnalyzingTask(Task):
 class GeoDataFetchingTask(Task):
     """Получение данных через API Геокодера."""
 
-    def __init__(
-        self, api: YandexGeoAPI, addresses: Optional[List[str]] = None
-    ):
+    def __init__(self, api: YandexGeoAPI, addresses: List[str]):
         self.api = api
-        self.addresses = addresses or CITIES
+        self.addresses = addresses
 
     def load_url(self, address: str):
         try:
