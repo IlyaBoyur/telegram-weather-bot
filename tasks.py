@@ -274,9 +274,13 @@ class GeoDataParsingTask(Task):
             count = collection["metaDataProperty"]["GeocoderResponseMetaData"][
                 "found"
             ]
-            if count != "1":
+            if count > "1":
+                request = collection["metaDataProperty"][
+                    "GeocoderResponseMetaData"
+                ]["request"]
                 logger.warning(
-                    f"To many locations has been found: {count}. First location is used"
+                    f"For request `{request}` to many locations has been found:"
+                    f" {count}. First found location is used"
                 )
             longitude, latitude = collection["featureMember"][0]["GeoObject"][
                 "Point"
