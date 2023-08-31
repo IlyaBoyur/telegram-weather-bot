@@ -3,6 +3,7 @@ import logging
 from abc import ABC
 from dataclasses import dataclass
 from http import HTTPStatus
+from typing import Tuple, Union
 from urllib.error import HTTPError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
@@ -57,28 +58,6 @@ class YandexAPI(ABC):
             logger.exception(ERR_MESSAGE_TEMPLATE)
             raise RuntimeError
 
-    def _get_url_by_city_name(self, city_name: str) -> str:
-        if (city := CITIES.get(city_name)) is None:
-            raise RuntimeError(ERROR_NO_CITY.format(city=city_name))
-        lat, lon = city
-        query = urlencode(
-            {
-                "lat": lat,
-                "lon": lon,
-                "lang": self.language,
-                "limit": 1,
-            }
-        )
-        return f"{self.api_url}?{query}"
-
-    def get_forecasting(self, city_name: str):
-        """
-        :param city_name: key as str
-        :return: response data as json
-        """
-        city_url = self._get_url_by_city_name(city_name)
-        return self._do_req(city_url)
-
 
 class YandexWeatherAPIError(YandexAPIError):
     pass
@@ -92,6 +71,39 @@ class YandexWeatherAPI(YandexAPI):
     api_key: str = YANDEX_WEATHER_API_KEY
     exception_class: YandexAPIError = YandexWeatherAPIError
     language: str = YANDEX_WEATHER_API_LANGUAGE
+
+    def _get_url_by_city_name(self, city_name: str) -> str:
+        if (city := CITIES.get(city_name)) is None:
+            raise self.exception_class(ERROR_NO_CITY.format(city=city_name))
+        latitude, longitude = city
+        return self._get_url_by_coords(latitude, longitude)
+
+    def _get_url_by_coords(self, latitude: float, longitude: float) -> str:
+        query = urlencode(
+            {
+                "lat": latitude,
+                "lon": longitude,
+                "lang": self.language,
+                "limit": 1,
+            }
+        )
+        return f"{self.api_url}?{query}"
+
+    def get_forecasting(self, location: Union[str, Tuple[float, float]]):
+        """
+        :param location: string or a tuple of two float coordinates
+        :return: response data as json
+        """
+        if isinstance(location, tuple):
+            latitude, longitude = location
+            location_url = self._get_url_by_coords(latitude, longitude)
+        elif isinstance(location, str):
+            location_url = self._get_url_by_city_name(location)
+        else:
+            raise self.exception_class(
+                "City parameter should be a string or a tuple of two float coordinates"
+            )
+        return self._do_req(location_url)
 
 
 class YandexGeoAPIError(YandexAPIError):
