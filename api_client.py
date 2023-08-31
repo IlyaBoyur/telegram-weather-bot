@@ -10,6 +10,9 @@ from urllib.request import Request, urlopen
 from utils import (
     CITIES,
     ERR_MESSAGE_TEMPLATE,
+    YANDEX_GEO_API_KEY,
+    YANDEX_GEO_API_LANGUAGE,
+    YANDEX_GEO_API_URL,
     YANDEX_WEATHER_API_KEY,
     YANDEX_WEATHER_API_LANGUAGE,
     YANDEX_WEATHER_API_URL,
@@ -89,3 +92,31 @@ class YandexWeatherAPI(YandexAPI):
     api_key: str = YANDEX_WEATHER_API_KEY
     exception_class: YandexAPIError = YandexWeatherAPIError
     language: str = YANDEX_WEATHER_API_LANGUAGE
+
+
+class YandexGeoAPIError(YandexAPIError):
+    pass
+
+
+@dataclass
+class YandexGeoAPI(YandexAPI):
+    """Base class for requests to YandexGeoAPI."""
+
+    api_url: str = YANDEX_GEO_API_URL
+    api_key: str = YANDEX_GEO_API_KEY
+    exception_class: YandexAPIError = YandexGeoAPIError
+    language: str = YANDEX_GEO_API_LANGUAGE
+
+    def get_geolocation(self, address: str):
+        """
+        :param address: key as str
+        :return: response data as json
+        """
+        query = urlencode(
+            {
+                "apikey": self.api_key,
+                "geocode": address,
+                "format": "json",
+            }
+        )
+        return self._do_req(f"{self.api_url}?{query}")
