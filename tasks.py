@@ -24,7 +24,7 @@ class Task(abc.ABC):
 
 
 class DataFetchingTask(Task):
-    """Получение данных через API"""
+    """Получение данных через API."""
 
     def __init__(
         self, api: YandexWeatherAPI, cities: Optional[List[str]] = None
@@ -54,7 +54,7 @@ class DataFetchingTask(Task):
 
 
 class DataCalculationTask(Task):
-    """Вычисление погодных параметров"""
+    """Вычисление погодных параметров."""
 
     def __init__(self, cities: List[Any]):
         self.cities = cities
@@ -72,14 +72,14 @@ class DataCalculationTask(Task):
 
     @staticmethod
     def calculate_avg_temperature(hours: List[Dict[str, Any]]):
-        """Считает среднюю температуру за период"""
+        """Считает среднюю температуру за период."""
 
         temperature = sum(hour["temp"] for hour in hours) / len(hours)
         return temperature
 
     @staticmethod
     def calculate_comfort_hours(hours: List[Dict[str, Any]]):
-        """Считает время без осадков за период"""
+        """Считает время без осадков за период."""
 
         pleasant_hours = sum(
             1 for hour in hours if hour["condition"] in PLEASANT_CONDITIONS
@@ -121,7 +121,7 @@ class DataCalculationTask(Task):
 
 
 class DataAggregationTask(Task):
-    """Объединение вычисленных данных"""
+    """Объединение вычисленных данных."""
 
     def __init__(self, city_aggregations: List[Any]):
         self.city_aggregations = city_aggregations
@@ -148,7 +148,7 @@ class DataAggregationTask(Task):
 
 
 class DataAnalyzingTask(Task):
-    """Финальный анализ и получение результата"""
+    """Финальный анализ и получение результата."""
 
     def __init__(self, cities: List[Any]):
         self.cities = cities
