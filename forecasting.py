@@ -51,6 +51,19 @@ def forecast_weather():
     return process_tasks(tasks)
 
 
+def get_weather(location: str):
+    tasks = [
+        (
+            GeoDataFetchingTask,
+            {"api": YandexGeoAPI(), "addresses": (location,), "_input": None},
+        ),
+        (GeoDataParsingTask, {"_input": "locations"}),
+        (DataFetchingTask, {"api": YandexWeatherAPI(), "_input": "locations"}),
+        (DataCalculationTask, {"_input": "forecasts"}),
+    ]
+    return process_tasks(tasks)
+
+
 if __name__ == "__main__":
     logging.basicConfig(
         format="[%(levelname)s] - %(asctime)s - %(message)s",
