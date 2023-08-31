@@ -37,15 +37,9 @@ class YandexAPI(ABC):
 
     def _do_req(self, url: str):
         """Base request method"""
+        headers = {"X-Yandex-API-Key": self.api_key} if self.api_key else {}
         try:
-            with urlopen(
-                Request(
-                    url,
-                    headers={"X-Yandex-API-Key": self.api_key}
-                    if self.api_key
-                    else {},
-                )
-            ) as request:
+            with urlopen(Request(url, headers=headers)) as request:
                 response = request.read().decode("utf-8")
                 result = json.loads(response)
             if HTTPStatus.OK != request.status:
