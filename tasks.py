@@ -49,7 +49,7 @@ class DataFetchingTask(Task):
                 for forecast in pool.map(self.load_url, self.locations)
                 if forecast is not None
             ]
-            logger.debug(f"DataFetchingTask output: {data}")
+            logger.debug(f"{self.__class__.__name__} output: {data}")
             return data
 
 
@@ -123,7 +123,7 @@ class DataCalculationTask(Task):
     def worker(self):
         with Pool() as pool:
             city_forecasts = pool.map(self.calculate_city_data, self.forecasts)
-        logger.debug(f"forecasts_data: {city_forecasts}")
+        logger.debug(f"{self.__class__.__name__} output: {city_forecasts}")
         return city_forecasts
 
 
@@ -150,7 +150,9 @@ class DataAggregationTask(Task):
                 f"   temp_avg:{city['temperature_total_avg']:5.2f}"
             )
             city["rating"] = number
-        logger.debug(f"aggregations_data: {self.city_aggregations}")
+        logger.debug(
+            f"{self.__class__.__name__} output: {self.city_aggregations}"
+        )
         return self.city_aggregations
 
 
@@ -264,7 +266,7 @@ class GeoDataFetchingTask(Task):
                 for location in pool.map(self.load_url, self.addresses)
                 if location is not None
             ]
-            logger.debug(f"DataFetchingTask output: {data}")
+            logger.debug(f"{self.__class__.__name__} output: {data}")
             return data
 
 
@@ -305,5 +307,5 @@ class GeoDataParsingTask(Task):
                 for coords in pool.map(self.get_coordinates, self.locations)
                 if coords is not None
             ]
-            logger.debug(f"GeoDataParsingTask output: {data}")
+            logger.debug(f"{self.__class__.__name__} output: {data}")
             return data
