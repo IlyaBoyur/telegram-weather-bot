@@ -11,4 +11,5 @@ ERROR_GEO_PARSING_API = (
 )
 TIMEOUT_PERIOD = 25
 PLEASANT_CONDITIONS = {"clear", "partly-cloudy", "cloudy", "overcast"}
+PLEASANT_TEMPERATURE_RANGE = (18, 27)
 FORECAST_TARGET_HOURS = set(range(9, 20))
