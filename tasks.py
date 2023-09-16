@@ -13,6 +13,7 @@ from constants import (
     ERROR_WEATHER_API,
     FORECAST_TARGET_HOURS,
     PLEASANT_CONDITIONS,
+    PLEASANT_TEMPERATURE_RANGE,
 )
 
 logger = logging.getLogger(__name__)
@@ -78,10 +79,16 @@ class DataCalculationTask(Task):
 
     @staticmethod
     def calculate_comfort_hours(hours: List[Dict[str, Any]]):
-        """Считает время без осадков за период."""
+        """Считает комфортное время за период."""
 
+        temp_min, temp_max = PLEASANT_TEMPERATURE_RANGE
         pleasant_hours = sum(
-            1 for hour in hours if hour["condition"] in PLEASANT_CONDITIONS
+            1
+            for hour in hours
+            if (
+                hour["condition"] in PLEASANT_CONDITIONS
+                and temp_min <= hour["temp"] <= temp_max
+            )
         )
         return pleasant_hours
 
@@ -131,16 +138,16 @@ class DataAggregationTask(Task):
             sorted(
                 self.city_aggregations,
                 key=lambda city: (
-                    -city["temperature_total_avg"],
                     -city["hours_total_avg"],
+                    -city["temperature_total_avg"],
                 ),
             ),
             1,
         ):
             logger.info(
                 f"{number:3}) {city['city']:15}"
-                f"   temp_avg:{city['temperature_total_avg']:5.2f}"
                 f"   hours_avg:{city['hours_total_avg']:5.2f}"
+                f"   temp_avg:{city['temperature_total_avg']:5.2f}"
             )
             city["rating"] = number
         logger.debug(f"aggregations_data: {self.city_aggregations}")
