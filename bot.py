@@ -62,7 +62,17 @@ async def best_weather_command(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> None:
     """Send a message when the command /best_weather is issued."""
-    raise NotImplementedError
+    from forecasting import forecast_weather
+
+    await update.message.reply_text(REPLY_WAIT)
+    dataset = forecast_weather()
+    with open("forecasts.xls", "wb") as f:
+        f.write(dataset.export("xls"))
+    await update.message.reply_document(
+        document=open("./forecasts.xls", "rb"),
+        filename="forecasts.xls",
+        caption="Подробный прогноз здесь",
+    )
 
 
 async def default(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
