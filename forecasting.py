@@ -13,6 +13,7 @@ from tasks import (
 )
 from utils import CITIES
 
+
 logger = logging.getLogger()
 
 
@@ -52,7 +53,7 @@ def forecast_weather():
     return process_tasks(tasks)
 
 
-def get_weather(location: str):
+def get_weather(location: str) -> Dict[str, Any]:
     tasks = [
         (
             GeoDataFetchingTask,
@@ -62,7 +63,8 @@ def get_weather(location: str):
         (DataFetchingTask, {"api": YandexWeatherAPI(), "_input": "locations"}),
         (DataCalculationTask, {"_input": "forecasts"}),
     ]
-    return process_tasks(tasks)
+    result: List[Dict[str, Any]] = process_tasks(tasks)
+    return result.pop()
 
 
 def get_weather_by_position(
