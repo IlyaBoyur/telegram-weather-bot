@@ -1,12 +1,19 @@
 import logging
 import os
+from enum import Enum
 
 from dotenv import load_dotenv
-from telegram import ForceReply, Update
+from telegram import (
+    KeyboardButton,
+    ReplyKeyboardMarkup,
+    ReplyKeyboardRemove,
+    Update,
+)
 from telegram.ext import (
     Application,
     CommandHandler,
     ContextTypes,
+    ConversationHandler,
     MessageHandler,
     filters,
 )
@@ -31,9 +38,24 @@ REPLY_PROMO = "📌Приглашай людей по реферальной с�
 REPLY_START = (
     "Привет, {username}! Что я умею:\n" + REPLY_HELP + "\n" + REPLY_PROMO
 )
+REPLY_LOCATION_REQUEST = "Мне нужна Ваша геолокация"
+REPLY_HOW_TO_CANCEL = "Отправьте /cancel для возврата в основное меню."
+REPLY_CANCEL = "Запрос отменен. Меню:\n" + REPLY_HELP
+REPLY_WAIT = "Запрос отправлен, пожалуйста подождите..."
+REPLY_WEATHER = (
+    "По данным Яндекс.Погоды,"
+    " сегодня в городе {location} в среднем {temperature:.1f} °C"
+)
+REPLY_NEED_PLACE = "Напишите место, где вы хотите узнать погоду"
+BTN_REQUEST_GEO = "Отправить свою геолокацию"
 
 
 logger = logging.getLogger(__name__)
+
+
+class ConversationState(int, Enum):
+    LOCATION = 0
+    PLACE = 1
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -53,9 +75,50 @@ async def help_command(
 
 async def my_weather_command(
     update: Update, context: ContextTypes.DEFAULT_TYPE
-) -> None:
+) -> int:
     """Send a message when the command /my_weather is issued."""
-    raise NotImplementedError
+    keyboard = [[KeyboardButton(BTN_REQUEST_GEO, request_location=True)]]
+    await update.message.reply_text(
+        REPLY_LOCATION_REQUEST + "\n" + REPLY_HOW_TO_CANCEL,
+        reply_markup=ReplyKeyboardMarkup(keyboard, one_time_keyboard=True),
+    )
+    return ConversationState.LOCATION
+
+
+async def location(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Uses the location to request weather and reply it to the user."""
+    from forecasting import get_weather_by_position
+
+    user = update.message.from_user
+    latitude = update.message.location.latitude
+    longitude = update.message.location.longitude
+    logger.info("User %s: %f / %f", user.first_name, latitude, longitude)
+    await update.message.reply_text(REPLY_WAIT)
+    weather = get_weather_by_position(latitude, longitude)
+    logger.info(f"Weather: %s", weather)
+    await update.message.reply_text(
+        REPLY_WEATHER.format(
+            location=weather.get("city"),
+            temperature=weather.get("temperature_total_avg"),
+        ),
+        reply_markup=ReplyKeyboardRemove(),
+    )
+    return ConversationHandler.END
+
+
+async def cancel_command(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
+    """Cancels and ends the conversation."""
+    user = update.message.from_user
+    logger.info("User %s canceled the conversation.", user.first_name)
+    await update.message.reply_text(
+        REPLY_CANCEL, reply_markup=ReplyKeyboardRemove()
+    )
+    return ConversationHandler.END
+
+
+
 
 
 async def best_weather_command(
@@ -80,6 +143,24 @@ async def default(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(REPLY_DEFAULT)
 
 
+def create_my_weather_handler():
+    conversation_handler = ConversationHandler(
+        entry_points=[CommandHandler("my_weather", my_weather_command)],
+        states={
+            ConversationState.LOCATION: [
+                MessageHandler(filters.LOCATION, location),
+                CommandHandler("cancel", cancel_command),
+            ]
+        },
+        fallbacks=[CommandHandler("cancel", cancel_command)],
+        conversation_timeout=30,
+    )
+    return conversation_handler
+
+
+
+
+
 def main() -> None:
     """Start the bot."""
     logging.basicConfig(
@@ -92,7 +173,7 @@ def main() -> None:
     # Register commands - answers in Telegram
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", help_command))
-    app.add_handler(CommandHandler("my_weather", my_weather_command))
+    app.add_handler(create_my_weather_handler())
     app.add_handler(CommandHandler("best_weather", best_weather_command))
     # Register user`s non-command request reply
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, default))
