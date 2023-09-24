@@ -118,9 +118,6 @@ async def cancel_command(
     return ConversationHandler.END
 
 
-
-
-
 async def best_weather_command(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> None:
@@ -138,9 +135,28 @@ async def best_weather_command(
     )
 
 
-async def default(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Reply with default message."""
-    await update.message.reply_text(REPLY_DEFAULT)
+async def get_weather_command(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
+    """Send a message when the command /get_weather is issued."""
+    await update.message.reply_text(
+        REPLY_NEED_PLACE + "\n" + REPLY_HOW_TO_CANCEL
+    )
+    return ConversationState.PLACE
+
+
+async def place(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    from forecasting import get_weather
+
+    await update.message.reply_text(REPLY_WAIT)
+    weather = get_weather(update.message.text)
+    await update.message.reply_text(
+        REPLY_WEATHER.format(
+            location=weather.get("city"),
+            temperature=weather.get("temperature_total_avg"),
+        ),
+        reply_markup=ReplyKeyboardRemove(),
+    )
 
 
 def create_my_weather_handler():
@@ -158,7 +174,24 @@ def create_my_weather_handler():
     return conversation_handler
 
 
+def create_get_weather_handler():
+    conversation_handler = ConversationHandler(
+        entry_points=[CommandHandler("get_weather", get_weather_command)],
+        states={
+            ConversationState.PLACE: [
+                MessageHandler(filters.TEXT, place),
+                CommandHandler("cancel", cancel_command),
+            ]
+        },
+        fallbacks=[CommandHandler("cancel", cancel_command)],
+        conversation_timeout=60,
+    )
+    return conversation_handler
 
+
+async def default(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Reply with default message."""
+    await update.message.reply_text(REPLY_DEFAULT)
 
 
 def main() -> None:
@@ -174,6 +207,7 @@ def main() -> None:
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(create_my_weather_handler())
+    app.add_handler(create_get_weather_handler())
     app.add_handler(CommandHandler("best_weather", best_weather_command))
     # Register user`s non-command request reply
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, default))
