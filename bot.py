@@ -23,7 +23,7 @@ REPLY_DEFAULT = (
 REPLY_HELP = """
 /my_weather - погода рядом
 /get_weather - погода в любой точке мира
-/best_weather - топ 5 городов с лучшей погодой сегодня:
+/best_weather - топ городов с лучшей погодой сегодня:
  • макс. средняя температура, температура днём +18..+27 °C
  • макс. часов приятных погодных условий: только безоблачная и малооблачная погода
 """
@@ -40,8 +40,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a message when the command /start is issued."""
     user = update.effective_user
     await update.message.reply_html(
-        REPLY_START.format(username=user.mention_html()),
-        reply_markup=ForceReply(selective=True),
+        REPLY_START.format(username=user.mention_html())
     )
 
 
