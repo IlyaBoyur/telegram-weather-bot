@@ -21,6 +21,7 @@ def process_tasks(tasks: List[Tuple[Type[Task], Dict[str, Any]]]):
     "_input" в списке параметров -
     куда направить результат работы предыдущей задачи.
     Значение None означает, что входные данные не требуются.
+    Первая задача должна иметь этот параметр равным None.
     """
     for task, params in tasks:
         if (parameter := params.pop("_input", None)) is not None:
@@ -62,6 +63,21 @@ def get_weather(location: str):
         (DataCalculationTask, {"_input": "forecasts"}),
     ]
     return process_tasks(tasks)
+
+
+def get_weather_by_position(
+    latitude: float, longitude: float
+) -> Dict[str, Any]:
+    """Calculate weather for a location."""
+    tasks = [
+        (
+            DataFetchingTask,
+            {"api": YandexWeatherAPI(), "locations": ((latitude, longitude),)},
+        ),
+        (DataCalculationTask, {"_input": "forecasts"}),
+    ]
+    result: List[Dict[str, Any]] = process_tasks(tasks)
+    return result.pop()
 
 
 if __name__ == "__main__":
