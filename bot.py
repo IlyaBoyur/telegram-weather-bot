@@ -75,19 +75,15 @@ def main() -> None:
     )
     # Disable telegram library`s httpx message logging
     logging.getLogger("httpx").setLevel(logging.WARNING)
-    application = Application.builder().token(TOKEN).build()
+    app = Application.builder().token(TOKEN).build()
     # Register commands - answers in Telegram
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("help", help_command))
-    application.add_handler(CommandHandler("my_weather", my_weather_command))
-    application.add_handler(
-        CommandHandler("best_weather", best_weather_command)
-    )
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("help", help_command))
+    app.add_handler(CommandHandler("my_weather", my_weather_command))
+    app.add_handler(CommandHandler("best_weather", best_weather_command))
     # Register user`s non-command request reply
-    application.add_handler(
-        MessageHandler(filters.TEXT & ~filters.COMMAND, default)
-    )
-    application.run_polling(allowed_updates=Update.ALL_TYPES)
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, default))
+    app.run_polling(allowed_updates=Update.ALL_TYPES)
 
 
 if __name__ == "__main__":
