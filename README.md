@@ -11,29 +11,6 @@ Python3.10, python-telegram-bot, tablib, flake8, pytest
 Прогноз - [API Яндекс.Погоды](https://yandex.ru/dev/weather/)
 
 
-## Быстрый старт
-### 1) Добавить файл переменных среды
-Примеры переменных в файле [.env.example](.env.example) в корне проекта
-
-### 2) Установить локальное окружение
-```shell
-$ python3 -m venv venv
-$ venv/bin/activate # Windows (Git Bash): source venv/Scripts/activate
-```
-
-### 3) Установить зависимости
-```shell
-$ pip install -r requirements.txt
-```
-
-### 4) Запуск
-```shell
-# в корне проекта
-$ python3 bot.py
-```
-```forecasts.xls``` в папке проекта содержит результат анализа по команде боту `/best_weather`
-
-
 ## Описание
 Проект представляет собой телеграм бот, который:
 * сообщает, какая погода рядом с пользователем (/my_weather)
@@ -43,6 +20,8 @@ $ python3 bot.py
 Для простоты проекта, список городов находится в переменной `CITIES` в файле [utils.py](utils.py).
 
 Анализ данных ведется по погодным условиям, полученным от API Яндекс Погоды.
+
+
 ### Способ расчета рейтинга для города
 - период вычислений в течение дня — с 9 до 19 часов;
 - средняя температура рассчитывается за указанный промежуток времени;
@@ -67,7 +46,6 @@ $ python3 bot.py
 
 
 ## Реализация
-
 1. Для решения используются как процессы, так и потоки.
 2. Для решения используются как очередь, так и пул задач.
 3. Этапы решения описаны в виде отдельных классов в модуле [tasks.py](tasks.py):
@@ -78,8 +56,8 @@ $ python3 bot.py
   - `DataAggregationTask` — объединение вычисленных данных;
   - `DataAnalyzingTask` — финальный анализ и получение результата.
 
-## Пример использования `YandexWeatherAPI` для работы с API
 
+## Пример использования `YandexWeatherAPI` для работы с API
 ```python
 from api_client import YandexWeatherAPI
 
@@ -89,8 +67,33 @@ resp = ywAPI.get_forecasting(city_name)
 ```
 
 
-## Авторы
+## Быстрый старт
+### 1) Добавить файл переменных среды
+Примеры переменных в файле [.env.example](.env.example) в корне проекта
 
+
+### 2) Установить локальное окружение
+```shell
+$ python3 -m venv venv
+$ venv/bin/activate # Windows (Git Bash): source venv/Scripts/activate
+```
+
+
+### 3) Установить зависимости
+```shell
+$ pip install -r requirements.txt
+```
+
+
+### 4) Запуск
+```shell
+# в корне проекта
+$ python3 bot.py
+```
+```forecasts.xls``` в папке проекта содержит результат анализа по команде боту `/best_weather`
+
+
+## Авторы
 [Илья Боюр](https://github.com/IlyaBoyur)
 
 
