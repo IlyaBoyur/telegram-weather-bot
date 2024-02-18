@@ -1,3 +1,4 @@
+import csv
 import os
 
 from dotenv import load_dotenv
@@ -16,43 +17,19 @@ YANDEX_GEO_API_URL = os.getenv("YANDEX_GEO_API_URL")
 YANDEX_GEO_API_KEY = os.getenv("YANDEX_GEO_API_KEY")
 YANDEX_GEO_API_LANGUAGE = os.getenv("YANDEX_GEO_API_LANGUAGE", "ru_RU")
 
-
+DATA_ROOT = os.getenv("DATA_ROOT", "./data")
+DATA_FILE = "cities_data_debug.csv" if DEBUG else "cities_data.csv"
+CITIES = []
 if DEBUG:
-    CITIES = {
-        "MOSCOW": "https://code.s3.yandex.net/async-module/moscow-response.json",
-        "PARIS": "https://code.s3.yandex.net/async-module/paris-response.json",
-        "LONDON": "https://code.s3.yandex.net/async-module/london-response.json",
-        "BERLIN": "https://code.s3.yandex.net/async-module/berlin-response.json",
-        "BEIJING": "https://code.s3.yandex.net/async-module/beijing-response.json",
-        "KAZAN": "https://code.s3.yandex.net/async-module/kazan-response.json",
-        "SPETERSBURG": "https://code.s3.yandex.net/async-module/spetersburg-response.json",
-        "VOLGOGRAD": "https://code.s3.yandex.net/async-module/volgograd-response.json",
-        "NOVOSIBIRSK": "https://code.s3.yandex.net/async-module/novosibirsk-response.json",
-        "KALININGRAD": "https://code.s3.yandex.net/async-module/kaliningrad-response.json",
-        "ABUDHABI": "https://code.s3.yandex.net/async-module/abudhabi-response.json",
-        "WARSZAWA": "https://code.s3.yandex.net/async-module/warszawa-response.json",
-        "BUCHAREST": "https://code.s3.yandex.net/async-module/bucharest-response.json",
-        "ROMA": "https://code.s3.yandex.net/async-module/roma-response.json",
-        "CAIRO": "https://code.s3.yandex.net/async-module/cairo-response.json",
-    }
+    row_parser = lambda row: row["source"]
 else:
-    CITIES = {
-        "MOSCOW": [55.755864, 37.617698],
-        "PARIS": [48.856663, 2.351556],
-        "LONDON": [51.507351, -0.127696],
-        "BERLIN": [52.518621, 13.375142],
-        "BEIJING": [39.901850, 116.391441],
-        "KAZAN": [55.796127, 49.106414],
-        "SAINT PETERSBURG": [59.938784, 30.314997],
-        "VOLGOGRAD": [48.707067, 44.516975],
-        "NOVOSIBIRSK": [55.030204, 82.920430],
-        "KALININGRAD": [54.710162, 20.510137],
-        "ABUDHABI": [24.443257, 54.393071],
-        "WARSZAWA": [52.232090, 21.007139],
-        "BUCHAREST": [44.436379, 26.099041],
-        "ROMA": [41.887064, 12.504809],
-        "CAIRO": [30.050755, 31.246909],
-    }
+    row_parser = lambda row: [float(f) for f in row["source"].strip("[]").split(",")]
+try:
+    with open(f"{DATA_ROOT}/{DATA_FILE}") as csvfile:
+        CITIES = [_ for _ in csv.DictReader(csvfile, delimiter=",", escapechar="\\")]
+    CITIES = {row["city"]: row_parser(row) for row in CITIES}
+except KeyError:
+    CITIES = []
 
 
 def check_python_version():
