@@ -8,8 +8,8 @@ from urllib.error import HTTPError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
+from city_repository import CityRepository
 from settings import (
-    CITIES,
     ERR_MESSAGE_TEMPLATE,
     YANDEX_GEO_API_KEY,
     YANDEX_GEO_API_LANGUAGE,
@@ -73,7 +73,7 @@ class YandexWeatherAPI(YandexAPI):
     language: str = YANDEX_WEATHER_API_LANGUAGE
 
     def _get_url_by_city_name(self, city_name: str) -> str:
-        if (city := CITIES.get(city_name)) is None:
+        if (city := CityRepository().first(name=city_name)) is None:
             raise self.exception_class(ERROR_NO_CITY.format(city=city_name))
         latitude, longitude = city
         return self._get_url_by_coords(latitude, longitude)

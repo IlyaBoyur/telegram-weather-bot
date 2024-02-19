@@ -2,6 +2,7 @@ import logging
 from typing import Any, Dict, List, Tuple, Type
 
 from api_client import YandexGeoAPI, YandexWeatherAPI
+from city_repository import CityRepository
 from tasks import (
     DataAggregationTask,
     DataAnalyzingTask,
@@ -11,7 +12,7 @@ from tasks import (
     GeoDataParsingTask,
     Task,
 )
-from settings import CITIES
+
 
 
 logger = logging.getLogger()
@@ -40,7 +41,7 @@ def forecast_weather():
             GeoDataFetchingTask,
             {
                 "api": YandexGeoAPI(),
-                "addresses": CITIES.keys(),
+                "addresses": [city.name for city in CityRepository().get_multi()],
                 "_input": None,
             },
         ),
