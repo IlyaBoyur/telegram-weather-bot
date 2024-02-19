@@ -8,7 +8,7 @@ from urllib.error import HTTPError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
-from utils import (
+from settings import (
     CITIES,
     ERR_MESSAGE_TEMPLATE,
     YANDEX_GEO_API_KEY,
