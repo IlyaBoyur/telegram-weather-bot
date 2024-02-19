@@ -87,7 +87,13 @@ $ pip install -r requirements.txt
 ```
 
 
-### 4) Запуск
+### 4) Запуск базы данных
+```shell
+# в корне проекта
+$ docker compose up -d --remove-orphans
+```
+
+### 5) Запуск
 ```shell
 # в корне проекта
 $ python3 bot.py
