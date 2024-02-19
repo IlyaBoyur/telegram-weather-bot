@@ -22,6 +22,7 @@ load_dotenv()
 
 
 TOKEN = os.getenv("BOT_TOKEN")
+FORECASTS_FILENAME = os.getenv("FORECASTS_FILENAME", "forecasts.xls")
 CRYING_FACE = "\U0001F622"
 REPLY_DEFAULT = (
     f"Извините, я Вас не понимаю {CRYING_FACE}\n"
@@ -95,7 +96,7 @@ async def location(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     logger.info("User %s: %f / %f", user.first_name, latitude, longitude)
     await update.message.reply_text(REPLY_WAIT)
     weather = get_weather_by_position(latitude, longitude)
-    logger.info(f"Weather: %s", weather)
+    logger.info("Weather: %s", weather)
     await update.message.reply_text(
         REPLY_WEATHER.format(
             location=weather.get("city"),
@@ -129,8 +130,8 @@ async def best_weather_command(
     with open("forecasts.xls", "wb") as f:
         f.write(dataset.export("xls"))
     await update.message.reply_document(
-        document=open("./forecasts.xls", "rb"),
-        filename="forecasts.xls",
+        document=open(f"./{FORECASTS_FILENAME}", "rb"),
+        filename=f"{FORECASTS_FILENAME}",
         caption="Подробный прогноз здесь",
     )
 
