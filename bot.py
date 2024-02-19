@@ -88,14 +88,14 @@ async def my_weather_command(
 
 async def location(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Uses the location to request weather and reply it to the user."""
-    from forecasting import get_weather_by_position
-
     user = update.message.from_user
     latitude = update.message.location.latitude
     longitude = update.message.location.longitude
     logger.info("User %s: %f / %f", user.first_name, latitude, longitude)
     await update.message.reply_text(REPLY_WAIT)
-    weather = get_weather_by_position(latitude, longitude)
+    weather = context.application.forecast_service.get_weather_by_position(
+        latitude, longitude
+    )
     logger.info("Weather: %s", weather)
     await update.message.reply_text(
         REPLY_WEATHER.format(
@@ -123,10 +123,8 @@ async def best_weather_command(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> None:
     """Send a message when the command /best_weather is issued."""
-    from forecasting import forecast_weather
-
     await update.message.reply_text(REPLY_WAIT)
-    dataset = forecast_weather()
+    dataset = context.application.forecast_service.forecast_weather()
     with open("forecasts.xls", "wb") as f:
         f.write(dataset.export("xls"))
     await update.message.reply_document(
@@ -147,10 +145,10 @@ async def get_weather_command(
 
 
 async def place(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    from forecasting import get_weather
-
     await update.message.reply_text(REPLY_WAIT)
-    weather = get_weather(update.message.text)
+    weather = context.application.forecast_service.get_weather(
+        update.message.text
+    )
     await update.message.reply_text(
         REPLY_WEATHER.format(
             location=weather.get("city"),
@@ -197,6 +195,8 @@ async def default(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 def main() -> None:
     """Start the bot."""
+    import forecasting
+
     logging.basicConfig(
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         level=logging.INFO,
@@ -204,6 +204,8 @@ def main() -> None:
     # Disable telegram library`s httpx message logging
     logging.getLogger("httpx").setLevel(logging.WARNING)
     app = Application.builder().token(TOKEN).build()
+    # Save forecast services
+    app.forecast_service = forecasting
     # Register commands - answers in Telegram
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", help_command))
