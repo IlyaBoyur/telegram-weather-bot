@@ -11,7 +11,7 @@ from tasks import (
     GeoDataParsingTask,
     Task,
 )
-from utils import CITIES
+from settings import CITIES
 
 
 logger = logging.getLogger()
