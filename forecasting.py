@@ -14,7 +14,6 @@ from tasks import (
 )
 
 
-
 logger = logging.getLogger()
 
 
@@ -41,7 +40,9 @@ def forecast_weather():
             GeoDataFetchingTask,
             {
                 "api": YandexGeoAPI(),
-                "addresses": [city.name for city in CityRepository().get_multi()],
+                "addresses": [
+                    city.name for city in CityRepository().get_multi()
+                ],
                 "_input": None,
             },
         ),
