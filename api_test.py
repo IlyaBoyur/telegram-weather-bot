@@ -10,8 +10,8 @@ def check_api():
     CITY_NAME_FOR_TEST = "MOSCOW"
 
     ywAPI = YandexWeatherAPI()
-    resp = ywAPI.get_forecasting(CITY_NAME_FOR_TEST)
-    attr = resp.get("info")
+    response = ywAPI.get_forecasting(CITY_NAME_FOR_TEST)
+    response.get("info")
 
 
 if __name__ == "__main__":
