@@ -2,7 +2,7 @@
 
 
 ## Технологии
-Python3.10, python-telegram-bot, tablib, flake8, pytest
+Python3.10, python-telegram-bot, tablib, flake8, pytest, pymongo
 
 
 ## Сторонние сервисы
