@@ -1,4 +1,7 @@
+import pymongo
 from dataclasses import dataclass
+
+import settings
 from utils import get_cities
 
 
@@ -15,8 +18,9 @@ class CityNotExist(RuntimeError):
 
 
 class CityRepository:
-    def __init__(self, cities: list[City] | None = None):
-        self.cities = cities or get_cities()
+    def __init__(self, cities: list[City] | None = None, use_mongodb: bool | None = None):
+        self.db = self._get_database()
+        self.use_mongodb = use_mongodb if use_mongodb is not None else settings.USE_MONGODB
 
     def get(self, **filters) -> City:
         try:
@@ -40,3 +44,14 @@ class CityRepository:
             )
         except StopIteration:
             return None
+
+    @property
+    def cities(self):
+        if self.use_mongodb:
+            return self.db.cities
+        return get_cities()
+
+    def _get_database(self):
+        """Get MongoDB database."""
+        return pymongo.MongoClient(settings.MONGODB_URL)[settings.MONGODB_DBNAME]
+
