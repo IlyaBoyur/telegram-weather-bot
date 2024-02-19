@@ -5,7 +5,7 @@ import settings
 
 
 @functools.lru_cache(1)
-def get_cities() -> list["City"]:
+def get_cities_from_csv() -> list["City"]:
     from city_repository import City
 
     cities: list[City] = []
