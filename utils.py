@@ -3,7 +3,6 @@ import functools
 import settings
 
 
-
 @functools.lru_cache(1)
 def get_cities_from_csv() -> list["City"]:
     from city_repository import City
@@ -12,7 +11,10 @@ def get_cities_from_csv() -> list["City"]:
     try:
         with open(f"{settings.DATA_ROOT}/{settings.DATA_FILE}") as csvfile:
             cities = [
-                _ for _ in csv.DictReader(csvfile, delimiter=",", escapechar="\\")
+                _
+                for _ in csv.DictReader(
+                    csvfile, delimiter=",", escapechar="\\"
+                )
             ]
         cities = [
             City(

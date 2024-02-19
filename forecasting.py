@@ -15,6 +15,8 @@ from tasks import (
 
 
 logger = logging.getLogger()
+city_service = CityRepository.from_csv()
+weather_api = YandexWeatherAPI(city_service=city_service)
 
 
 def process_tasks(tasks: List[Tuple[Type[Task], Dict[str, Any]]]):
@@ -32,22 +34,18 @@ def process_tasks(tasks: List[Tuple[Type[Task], Dict[str, Any]]]):
 
 
 def forecast_weather():
-    """
-    Анализ погодных условий по городам.
-    """
+    """Анализ погодных условий по городам."""
     tasks = [
         (
             GeoDataFetchingTask,
             {
                 "api": YandexGeoAPI(),
-                "addresses": [
-                    city.name for city in CityRepository().get_multi()
-                ],
+                "addresses": [city.name for city in city_service.get_multi()],
                 "_input": None,
             },
         ),
         (GeoDataParsingTask, {"_input": "locations"}),
-        (DataFetchingTask, {"api": YandexWeatherAPI(), "_input": "locations"}),
+        (DataFetchingTask, {"api": weather_api, "_input": "locations"}),
         (DataCalculationTask, {"_input": "forecasts"}),
         (DataAggregationTask, {"_input": "city_aggregations"}),
         (DataAnalyzingTask, {"_input": "cities"}),
@@ -62,7 +60,7 @@ def get_weather(location: str) -> Dict[str, Any]:
             {"api": YandexGeoAPI(), "addresses": (location,), "_input": None},
         ),
         (GeoDataParsingTask, {"_input": "locations"}),
-        (DataFetchingTask, {"api": YandexWeatherAPI(), "_input": "locations"}),
+        (DataFetchingTask, {"api": weather_api, "_input": "locations"}),
         (DataCalculationTask, {"_input": "forecasts"}),
     ]
     result: List[Dict[str, Any]] = process_tasks(tasks)
@@ -76,7 +74,7 @@ def get_weather_by_position(
     tasks = [
         (
             DataFetchingTask,
-            {"api": YandexWeatherAPI(), "locations": ((latitude, longitude),)},
+            {"api": weather_api, "locations": ((latitude, longitude),)},
         ),
         (DataCalculationTask, {"_input": "forecasts"}),
     ]
