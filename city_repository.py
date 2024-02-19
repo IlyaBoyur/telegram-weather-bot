@@ -1,8 +1,8 @@
 import pymongo
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 
 import settings
-from utils import get_cities
+from utils import get_cities_from_csv
 
 
 @dataclass
@@ -17,41 +17,55 @@ class CityNotExist(RuntimeError):
     pass
 
 
-class CityRepository:
-    def __init__(self, cities: list[City] | None = None, use_mongodb: bool | None = None):
+class MongoDBRepository:
+    def __init__(
+        self,
+        db_url: str = "",
+        db_name: str = "",
+        collection_name: str = "collection"
+    ) -> None:
+        self.mongodb_url = db_url or settings.MONGODB_URL
+        self.mongodb_name = db_name or settings.MONGODB_DBNAME
+        self.collection_name = collection_name
         self.db = self._get_database()
-        self.use_mongodb = use_mongodb if use_mongodb is not None else settings.USE_MONGODB
 
-    def get(self, **filters) -> City:
+    def _get_database(self) -> pymongo.MongoClient:
+        """Get MongoDB database."""
+        return pymongo.MongoClient(self.mongodb_url)[self.mongodb_name]
+
+    def get_multi(self) -> list:
+        return self.db[self.collection_name]
+
+    def create_multi(self, objects: list[object]) -> bool:
+        return self.db[self.collection_name].insert_many([asdict(obj) for obj in objects])
+
+    def get(self, **filters) -> object:
         try:
             return next(
-                city
-                for city in self.cities
-                if all(getattr(city, key) == value for key, value in filters)
+                obj
+                for obj in self.db[self.collection_name]
+                if all(getattr(obj, key) == value for key, value in filters)
             )
         except StopIteration:
-            raise CityNotExist
+            raise RuntimeError("Object does not exist.")
 
-    def get_multi(self) -> list[City]:
-        return self.cities
-
-    def first(self, **filters) -> City | None:
+    def first(self, **filters) -> object | None:
         try:
             return next(
-                city
-                for city in self.cities
-                if all(getattr(city, key) == value for key, value in filters)
+                obj
+                for obj in self.db[self.collection_name]
+                if all(getattr(obj, key) == value for key, value in filters)
             )
         except StopIteration:
             return None
 
-    @property
-    def cities(self):
-        if self.use_mongodb:
-            return self.db.cities
-        return get_cities()
 
-    def _get_database(self):
-        """Get MongoDB database."""
-        return pymongo.MongoClient(settings.MONGODB_URL)[settings.MONGODB_DBNAME]
+class CityRepository(MongoDBRepository):
+    def __init__(self, cities: list[City] | None = None, *args, **kwargs) -> None:
+        if cities is not None:
+            self.create_multi(cities)
+        super().__init__(*args, **kwargs)
 
+    @classmethod
+    def from_csv(cls):
+        return cls(cities=get_cities_from_csv())
