@@ -60,10 +60,12 @@ Python3.10, python-telegram-bot, tablib, flake8, pytest
 ## Пример использования `YandexWeatherAPI` для работы с API
 ```python
 from api_client import YandexWeatherAPI
+from city_repository import CityRepository
 
+
+ywAPI = YandexWeatherAPI(city_service=CityRepository.from_csv())
 city_name = "MOSCOW"
-ywAPI = YandexWeatherAPI()
-resp = ywAPI.get_forecasting(city_name)
+response = ywAPI.get_forecasting(city_name)
 ```
 
 
