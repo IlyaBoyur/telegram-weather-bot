@@ -40,7 +40,7 @@ class YandexAPI(ABC):
     language: str = "ru_RU"
 
     def _do_req(self, url: str):
-        """Base request method"""
+        """Base request method."""
         headers = {"X-Yandex-API-Key": self.api_key} if self.api_key else {}
         try:
             with urlopen(Request(url, headers=headers)) as request:
@@ -71,9 +71,10 @@ class YandexWeatherAPI(YandexAPI):
     api_key: str = YANDEX_WEATHER_API_KEY
     exception_class: YandexAPIError = YandexWeatherAPIError
     language: str = YANDEX_WEATHER_API_LANGUAGE
+    city_service: CityRepository
 
     def _get_url_by_city_name(self, city_name: str) -> str:
-        if (city := CityRepository().first(name=city_name)) is None:
+        if (city := self.city_service.first(name=city_name)) is None:
             raise self.exception_class(ERROR_NO_CITY.format(city=city_name))
         latitude, longitude = city
         return self._get_url_by_coords(latitude, longitude)

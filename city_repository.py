@@ -22,7 +22,7 @@ class MongoDBRepository:
         self,
         db_url: str = "",
         db_name: str = "",
-        collection_name: str = "collection"
+        collection_name: str = "collection",
     ) -> None:
         self.mongodb_url = db_url or settings.MONGODB_URL
         self.mongodb_name = db_name or settings.MONGODB_DBNAME
@@ -37,7 +37,9 @@ class MongoDBRepository:
         return self.db[self.collection_name]
 
     def create_multi(self, objects: list[object]) -> bool:
-        return self.db[self.collection_name].insert_many([asdict(obj) for obj in objects])
+        return self.db[self.collection_name].insert_many(
+            [asdict(obj) for obj in objects]
+        )
 
     def get(self, **filters) -> object:
         try:
@@ -61,7 +63,9 @@ class MongoDBRepository:
 
 
 class CityRepository(MongoDBRepository):
-    def __init__(self, cities: list[City] | None = None, *args, **kwargs) -> None:
+    def __init__(
+        self, cities: list[City] | None = None, *args, **kwargs
+    ) -> None:
         if cities is not None:
             self.create_multi(cities)
         super().__init__(*args, **kwargs)
