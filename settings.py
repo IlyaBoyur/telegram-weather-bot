@@ -1,4 +1,3 @@
-import csv
 import os
 
 from dotenv import load_dotenv
@@ -19,17 +18,6 @@ YANDEX_GEO_API_LANGUAGE = os.getenv("YANDEX_GEO_API_LANGUAGE", "ru_RU")
 
 DATA_ROOT = os.getenv("DATA_ROOT", "./data")
 DATA_FILE = "cities_data_debug.csv" if DEBUG else "cities_data.csv"
-CITIES = []
-if DEBUG:
-    row_parser = lambda row: row["source"]
-else:
-    row_parser = lambda row: [float(f) for f in row["source"].strip("[]").split(",")]
-try:
-    with open(f"{DATA_ROOT}/{DATA_FILE}") as csvfile:
-        CITIES = [_ for _ in csv.DictReader(csvfile, delimiter=",", escapechar="\\")]
-    CITIES = {row["city"]: row_parser(row) for row in CITIES}
-except KeyError:
-    CITIES = []
 
 
 def check_python_version():
